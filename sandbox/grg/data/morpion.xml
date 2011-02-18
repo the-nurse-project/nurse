@@ -1,0 +1,1579 @@
+<?xml version="1.0"?>
+
+<univers>
+
+  <objet classe="Case">
+    <name>A1</name>
+    <position abscisse="100" ordonnée="285" profondeur="-1"/>
+    <geometrie name="default">
+      <point abscisse="0" ordonnée="0" profondeur="0"/>
+      <point abscisse="130" ordonnée="0" profondeur="0"/>
+      <point abscisse="130" ordonnée="70" profondeur="0"/>
+      <point abscisse="0" ordonnée="70" profondeur="0"/>
+    </geometrie>
+    <etat name="CURRENT_IMAGE">
+      <valeur type="STRING">case</valeur>
+    </etat>
+    <etat name="VISIBLE">
+      <valeur type="BOOLEAN">TRUE</valeur>
+    </etat>
+    <etat name="cochée">
+      <option>cochée par A</option>
+      <option>cochée par B</option>
+      <option>pas cochée</option>
+      <valeur type="STRING">pas cochée</valeur>
+    </etat>
+    <action>Cocher</action>
+  </objet>
+
+  <objet classe="Case">
+    <name>A2</name>
+    <position abscisse="170" ordonnée="290" profondeur="-1"/>
+    <geometrie name="default">
+      <point abscisse="0" ordonnée="0" profondeur="0"/>
+      <point abscisse="50" ordonnée="0" profondeur="0"/>
+      <point abscisse="50" ordonnée="50" profondeur="0"/>
+      <point abscisse="0" ordonnée="50" profondeur="0"/>
+    </geometrie>
+    <etat name="CURRENT_IMAGE">
+      <valeur type="STRING">case</valeur>
+    </etat>
+    <etat name="VISIBLE">
+      <valeur type="BOOLEAN">TRUE</valeur>
+    </etat>
+    <etat name="cochée">
+      <option>cochée par A</option>
+      <option>cochée par B</option>
+      <option>pas cochée</option>
+      <valeur type="STRING">pas cochée</valeur>
+    </etat>
+    <action>Cocher</action>
+  </objet>
+
+  <objet classe="Case">
+    <name>A3</name>
+    <position abscisse="240" ordonnée="290" profondeur="-1"/>
+    <geometrie name="default">
+      <point abscisse="0" ordonnée="0" profondeur="0"/>
+      <point abscisse="50" ordonnée="0" profondeur="0"/>
+      <point abscisse="50" ordonnée="50" profondeur="0"/>
+      <point abscisse="0" ordonnée="50" profondeur="0"/>
+    </geometrie>
+    <etat name="CURRENT_IMAGE">
+      <valeur type="STRING">case</valeur>
+    </etat>
+    <etat name="VISIBLE">
+      <valeur type="BOOLEAN">TRUE</valeur>
+    </etat>
+    <etat name="cochée">
+      <option>cochée par A</option>
+      <option>cochée par B</option>
+      <option>pas cochée</option>
+      <valeur type="STRING">pas cochée</valeur>
+    </etat>
+    <action>Cocher</action>
+  </objet>
+
+  <objet classe="Case">
+    <name>B1</name>
+    <position abscisse="100" ordonnée="220" profondeur="-1"/>
+    <geometrie name="default">
+      <point abscisse="0" ordonnée="0" profondeur="0"/>
+      <point abscisse="50" ordonnée="0" profondeur="0"/>
+      <point abscisse="50" ordonnée="50" profondeur="0"/>
+      <point abscisse="0" ordonnée="50" profondeur="0"/>
+    </geometrie>
+    <etat name="CURRENT_IMAGE">
+      <valeur type="STRING">case</valeur>
+    </etat>
+    <etat name="VISIBLE">
+      <valeur type="BOOLEAN">TRUE</valeur>
+    </etat>
+    <etat name="cochée">
+      <option>cochée par A</option>
+      <option>cochée par B</option>
+      <option>pas cochée</option>
+      <valeur type="STRING">pas cochée</valeur>
+    </etat>
+    <action>Cocher</action>
+  </objet>
+
+  <objet classe="Case">
+    <name>B2</name>
+    <position abscisse="170" ordonnée="220" profondeur="-1"/>
+    <geometrie name="default">
+      <point abscisse="0" ordonnée="0" profondeur="0"/>
+      <point abscisse="50" ordonnée="0" profondeur="0"/>
+      <point abscisse="50" ordonnée="50" profondeur="0"/>
+      <point abscisse="0" ordonnée="50" profondeur="0"/>
+    </geometrie>
+    <etat name="CURRENT_IMAGE">
+      <valeur type="STRING">case</valeur>
+    </etat>
+    <etat name="VISIBLE">
+      <valeur type="BOOLEAN">TRUE</valeur>
+    </etat>
+    <etat name="cochée">
+      <option>cochée par A</option>
+      <option>cochée par B</option>
+      <option>pas cochée</option>
+      <valeur type="STRING">pas cochée</valeur>
+    </etat>
+    <action>Cocher</action>
+  </objet>
+
+  <objet classe="Case">
+    <name>B3</name>
+    <position abscisse="240" ordonnée="220" profondeur="-1"/>
+    <geometrie name="default">
+      <point abscisse="0" ordonnée="0" profondeur="0"/>
+      <point abscisse="50" ordonnée="0" profondeur="0"/>
+      <point abscisse="50" ordonnée="50" profondeur="0"/>
+      <point abscisse="0" ordonnée="50" profondeur="0"/>
+    </geometrie>
+    <etat name="CURRENT_IMAGE">
+      <valeur type="STRING">case</valeur>
+    </etat>
+    <etat name="VISIBLE">
+      <valeur type="BOOLEAN">TRUE</valeur>
+    </etat>
+    <etat name="cochée">
+      <option>cochée par A</option>
+      <option>cochée par B</option>
+      <option>pas cochée</option>
+      <valeur type="STRING">pas cochée</valeur>
+    </etat>
+    <action>Cocher</action>
+  </objet>
+
+  <objet classe="Case">
+    <name>C1</name>
+    <position abscisse="100" ordonnée="150" profondeur="-1"/>
+    <geometrie name="default">
+      <point abscisse="0" ordonnée="0" profondeur="0"/>
+      <point abscisse="50" ordonnée="0" profondeur="0"/>
+      <point abscisse="50" ordonnée="50" profondeur="0"/>
+      <point abscisse="0" ordonnée="50" profondeur="0"/>
+    </geometrie>
+    <etat name="CURRENT_IMAGE">
+      <valeur type="STRING">case</valeur>
+    </etat>
+    <etat name="VISIBLE">
+      <valeur type="BOOLEAN">TRUE</valeur>
+    </etat>
+    <etat name="cochée">
+      <option>cochée par A</option>
+      <option>cochée par B</option>
+      <option>pas cochée</option>
+      <valeur type="STRING">pas cochée</valeur>
+    </etat>
+    <action>Cocher</action>
+  </objet>
+
+  <objet classe="Case">
+    <name>C2</name>
+    <position abscisse="170" ordonnée="150" profondeur="-1"/>
+    <geometrie name="default">
+      <point abscisse="0" ordonnée="0" profondeur="0"/>
+      <point abscisse="50" ordonnée="0" profondeur="0"/>
+      <point abscisse="50" ordonnée="50" profondeur="0"/>
+      <point abscisse="0" ordonnée="50" profondeur="0"/>
+    </geometrie>
+    <etat name="CURRENT_IMAGE">
+      <valeur type="STRING">case</valeur>
+    </etat>
+    <etat name="VISIBLE">
+      <valeur type="BOOLEAN">TRUE</valeur>
+    </etat>
+    <etat name="cochée">
+      <option>cochée par A</option>
+      <option>cochée par B</option>
+      <option>pas cochée</option>
+      <valeur type="STRING">pas cochée</valeur>
+    </etat>
+    <action>Cocher</action>
+  </objet>
+
+  <objet classe="Case">
+    <name>C3</name>
+    <position abscisse="240" ordonnée="150" profondeur="-1"/>
+    <geometrie name="default">
+      <point abscisse="0" ordonnée="0" profondeur="0"/>
+      <point abscisse="50" ordonnée="0" profondeur="0"/>
+      <point abscisse="50" ordonnée="50" profondeur="0"/>
+      <point abscisse="0" ordonnée="50" profondeur="0"/>
+    </geometrie>
+    <etat name="CURRENT_IMAGE">
+      <valeur type="STRING">case</valeur>
+    </etat>
+    <etat name="VISIBLE">
+      <valeur type="BOOLEAN">TRUE</valeur>
+    </etat>
+    <etat name="cochée">
+      <option>cochée par A</option>
+      <option>cochée par B</option>
+      <option>pas cochée</option>
+      <valeur type="STRING">pas cochée</valeur>
+    </etat>
+    <action>Cocher</action>
+  </objet>
+
+  <objet classe="Arbitre">
+    <name>arbitre</name>
+    <etat name="VISIBLE">
+      <valeur type="BOOLEAN">FALSE</valeur>
+    </etat>
+    <etat name="tour courant">
+      <option>joueur A</option>
+      <option>joueur B</option>
+      <valeur type="STRING">joueur A</valeur>
+    </etat>
+    <action>Recommencer</action>
+  </objet>
+
+  <objet classe="Image">
+    <name>case</name>
+    <etat name="FILE">
+      <valeur type="STRING">case.png</valeur>
+    </etat>
+    <etat name="VISIBLE">
+      <valeur type="BOOLEAN">FALSE</valeur>
+    </etat>
+  </objet>
+
+  <objet classe="Timer">
+    <name>clock</name>
+    <etat name="INTERVAL">
+      <valeur type="INTEGER">1000</valeur>
+    </etat>
+    <etat name="RUNNING">
+      <valeur type="BOOLEAN">FALSE</valeur>
+    </etat>
+    <etat name="TYPE">
+      <valeur type="STRING">SINGLE</valeur>
+    </etat>
+    <etat name="VISIBLE">
+      <valeur type="BOOLEAN">FALSE</valeur>
+    </etat>
+    <action>Run</action>
+    <action>Stop</action>
+    <action>Tick</action>
+  </objet>
+
+  <objet classe="Image">
+    <name>croix</name>
+    <etat name="FILE">
+      <valeur type="STRING">croix.png</valeur>
+    </etat>
+    <etat name="VISIBLE">
+      <valeur type="BOOLEAN">FALSE</valeur>
+    </etat>
+  </objet>
+
+  <objet classe="Image">
+    <name>rond</name>
+    <etat name="FILE">
+      <valeur type="STRING">rond.png</valeur>
+    </etat>
+    <etat name="VISIBLE">
+      <valeur type="BOOLEAN">FALSE</valeur>
+    </etat>
+    <etat name="valeur">
+      <valeur type="INTEGER">0</valeur>
+    </etat>
+  </objet>
+
+  <objet classe="Test">
+    <name>temps</name>
+    <etat name="VISIBLE">
+      <valeur type="BOOLEAN">FALSE</valeur>
+    </etat>
+    <etat name="temps">
+      <valeur type="INTEGER">0</valeur>
+    </etat>
+  </objet>
+
+  <regle>
+    <condition>
+      <objet>A1</objet>
+      <etat>clique</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <implication>
+      <objet>rond</objet>
+      <etat>valeur</etat>
+      <valeur type="FUNCTION">AJOUTER(rond.valeur,1)</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>A1</objet>
+      <etat>clique</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <condition>
+      <objet>clock</objet>
+      <etat>RUNNING</etat>
+      <valeur>FALSE</valeur>
+    </condition>
+    <implication>
+      <objet>clock</objet>
+      <etat>Run</etat>
+      <valeur>[action]</valeur>
+    </implication>
+    <implication>
+      <objet>clock</objet>
+      <etat>RUNNING</etat>
+      <valeur>TRUE</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>A1</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>rond</valeur>
+    </condition>
+    <condition>
+      <objet>clock</objet>
+      <etat>Tick</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <implication>
+      <objet>A1</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>croix</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>A1</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>croix</valeur>
+    </condition>
+    <condition>
+      <objet>clock</objet>
+      <etat>Tick</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <implication>
+      <objet>A1</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>rond</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>clock</objet>
+      <etat>Stop</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <implication>
+      <objet>clock</objet>
+      <etat>RUNNING</etat>
+      <valeur>FALSE</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>A1</objet>
+      <etat>clique</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <condition>
+      <objet>A1</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </condition>
+    <condition>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur A</valeur>
+    </condition>
+    <implication>
+      <objet>A1</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </implication>
+    <implication>
+      <objet>A1</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>croix</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur B</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>A1</objet>
+      <etat>clique</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <condition>
+      <objet>A1</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </condition>
+    <condition>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur B</valeur>
+    </condition>
+    <implication>
+      <objet>A1</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </implication>
+    <implication>
+      <objet>A1</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>rond</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur A</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>B1</objet>
+      <etat>clique</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <condition>
+      <objet>B1</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </condition>
+    <condition>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur A</valeur>
+    </condition>
+    <implication>
+      <objet>B1</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </implication>
+    <implication>
+      <objet>B1</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>croix</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur B</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>B1</objet>
+      <etat>clique</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <condition>
+      <objet>B1</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </condition>
+    <condition>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur B</valeur>
+    </condition>
+    <implication>
+      <objet>B1</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </implication>
+    <implication>
+      <objet>B1</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>rond</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur A</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>C1</objet>
+      <etat>clique</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <condition>
+      <objet>C1</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </condition>
+    <condition>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur A</valeur>
+    </condition>
+    <implication>
+      <objet>C1</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </implication>
+    <implication>
+      <objet>C1</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>croix</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur B</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>C1</objet>
+      <etat>clique</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <condition>
+      <objet>C1</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </condition>
+    <condition>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur B</valeur>
+    </condition>
+    <implication>
+      <objet>C1</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </implication>
+    <implication>
+      <objet>C1</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>rond</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur A</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>A2</objet>
+      <etat>clique</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <condition>
+      <objet>A2</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </condition>
+    <condition>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur A</valeur>
+    </condition>
+    <implication>
+      <objet>A2</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </implication>
+    <implication>
+      <objet>A2</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>croix</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur B</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>A2</objet>
+      <etat>clique</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <condition>
+      <objet>A2</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </condition>
+    <condition>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur B</valeur>
+    </condition>
+    <implication>
+      <objet>A2</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </implication>
+    <implication>
+      <objet>A2</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>rond</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur A</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>B2</objet>
+      <etat>clique</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <condition>
+      <objet>B2</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </condition>
+    <condition>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur B</valeur>
+    </condition>
+    <implication>
+      <objet>B2</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </implication>
+    <implication>
+      <objet>B2</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>rond</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur A</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>B2</objet>
+      <etat>clique</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <condition>
+      <objet>B2</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </condition>
+    <condition>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur A</valeur>
+    </condition>
+    <implication>
+      <objet>B2</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </implication>
+    <implication>
+      <objet>B2</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>croix</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur B</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>C2</objet>
+      <etat>clique</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <condition>
+      <objet>C2</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </condition>
+    <condition>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur B</valeur>
+    </condition>
+    <implication>
+      <objet>C2</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </implication>
+    <implication>
+      <objet>C2</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>rond</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur A</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>C2</objet>
+      <etat>clique</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <condition>
+      <objet>C2</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </condition>
+    <condition>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur A</valeur>
+    </condition>
+    <implication>
+      <objet>C2</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </implication>
+    <implication>
+      <objet>C2</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>croix</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur B</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>A3</objet>
+      <etat>clique</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <condition>
+      <objet>A3</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </condition>
+    <condition>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur B</valeur>
+    </condition>
+    <implication>
+      <objet>A3</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </implication>
+    <implication>
+      <objet>A3</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>rond</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur A</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>A3</objet>
+      <etat>clique</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <condition>
+      <objet>A3</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </condition>
+    <condition>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur A</valeur>
+    </condition>
+    <implication>
+      <objet>A3</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </implication>
+    <implication>
+      <objet>A3</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>croix</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur B</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>B3</objet>
+      <etat>clique</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <condition>
+      <objet>B3</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </condition>
+    <condition>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur B</valeur>
+    </condition>
+    <implication>
+      <objet>B3</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </implication>
+    <implication>
+      <objet>B3</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>rond</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur A</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>B3</objet>
+      <etat>clique</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <condition>
+      <objet>B3</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </condition>
+    <condition>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur A</valeur>
+    </condition>
+    <implication>
+      <objet>B3</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </implication>
+    <implication>
+      <objet>B3</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>croix</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur B</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>C3</objet>
+      <etat>clique</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <condition>
+      <objet>C3</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </condition>
+    <condition>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur B</valeur>
+    </condition>
+    <implication>
+      <objet>C3</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </implication>
+    <implication>
+      <objet>C3</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>rond</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur A</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>C3</objet>
+      <etat>clique</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <condition>
+      <objet>C3</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </condition>
+    <condition>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur A</valeur>
+    </condition>
+    <implication>
+      <objet>C3</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </implication>
+    <implication>
+      <objet>C3</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>croix</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>tour courant</etat>
+      <valeur>joueur B</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>arbitre</objet>
+      <etat>Recommencer</etat>
+      <valeur>[action]</valeur>
+    </condition>
+    <implication>
+      <objet>A1</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </implication>
+    <implication>
+      <objet>A1</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>case</valeur>
+    </implication>
+    <implication>
+      <objet>A2</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </implication>
+    <implication>
+      <objet>A2</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>case</valeur>
+    </implication>
+    <implication>
+      <objet>A3</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </implication>
+    <implication>
+      <objet>A3</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>case</valeur>
+    </implication>
+    <implication>
+      <objet>B1</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </implication>
+    <implication>
+      <objet>B1</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>case</valeur>
+    </implication>
+    <implication>
+      <objet>B2</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </implication>
+    <implication>
+      <objet>B2</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>case</valeur>
+    </implication>
+    <implication>
+      <objet>B3</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </implication>
+    <implication>
+      <objet>B3</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>case</valeur>
+    </implication>
+    <implication>
+      <objet>C1</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </implication>
+    <implication>
+      <objet>C1</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>case</valeur>
+    </implication>
+    <implication>
+      <objet>C2</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </implication>
+    <implication>
+      <objet>C2</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>case</valeur>
+    </implication>
+    <implication>
+      <objet>C3</objet>
+      <etat>cochée</etat>
+      <valeur>pas cochée</valeur>
+    </implication>
+    <implication>
+      <objet>C3</objet>
+      <etat>CURRENT_IMAGE</etat>
+      <valeur>case</valeur>
+    </implication>
+    <implication>
+      <objet>SYSTEM</objet>
+      <etat>PRINT</etat>
+      <valeur>Jeu réinitialisé</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>A1</objet>
+      <etat>VISIBLE</etat>
+      <valeur>FALSE</valeur>
+    </condition>
+    <condition>
+      <objet>A2</objet>
+      <etat>VISIBLE</etat>
+      <valeur>FALSE</valeur>
+    </condition>
+    <condition>
+      <objet>A3</objet>
+      <etat>VISIBLE</etat>
+      <valeur>FALSE</valeur>
+    </condition>
+    <condition>
+      <objet>B1</objet>
+      <etat>VISIBLE</etat>
+      <valeur>FALSE</valeur>
+    </condition>
+    <condition>
+      <objet>B2</objet>
+      <etat>VISIBLE</etat>
+      <valeur>FALSE</valeur>
+    </condition>
+    <condition>
+      <objet>B3</objet>
+      <etat>VISIBLE</etat>
+      <valeur>FALSE</valeur>
+    </condition>
+    <condition>
+      <objet>C1</objet>
+      <etat>VISIBLE</etat>
+      <valeur>FALSE</valeur>
+    </condition>
+    <condition>
+      <objet>C2</objet>
+      <etat>VISIBLE</etat>
+      <valeur>FALSE</valeur>
+    </condition>
+    <condition>
+      <objet>C3</objet>
+      <etat>VISIBLE</etat>
+      <valeur>FALSE</valeur>
+    </condition>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>Recommencer</etat>
+      <valeur>[action]</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>A1</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <condition>
+      <objet>A2</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <condition>
+      <objet>A3</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <implication>
+      <objet>SYSTEM</objet>
+      <etat>PRINT</etat>
+      <valeur>A gagné</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>Recommencer</etat>
+      <valeur>[action]</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>A1</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <condition>
+      <objet>A2</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <condition>
+      <objet>A3</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <implication>
+      <objet>SYSTEM</objet>
+      <etat>PRINT</etat>
+      <valeur>B gagné</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>Recommencer</etat>
+      <valeur>[action]</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>B1</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <condition>
+      <objet>B2</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <condition>
+      <objet>B3</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <implication>
+      <objet>SYSTEM</objet>
+      <etat>PRINT</etat>
+      <valeur>A gagné</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>Recommencer</etat>
+      <valeur>[action]</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>B1</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <condition>
+      <objet>B2</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <condition>
+      <objet>B3</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <implication>
+      <objet>SYSTEM</objet>
+      <etat>PRINT</etat>
+      <valeur>B gagné</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>Recommencer</etat>
+      <valeur>[action]</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>C1</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <condition>
+      <objet>C2</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <condition>
+      <objet>C3</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <implication>
+      <objet>SYSTEM</objet>
+      <etat>PRINT</etat>
+      <valeur>A gagné</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>Recommencer</etat>
+      <valeur>[action]</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>C1</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <condition>
+      <objet>C2</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <condition>
+      <objet>C3</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <implication>
+      <objet>SYSTEM</objet>
+      <etat>PRINT</etat>
+      <valeur>B gagné</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>Recommencer</etat>
+      <valeur>[action]</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>A1</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <condition>
+      <objet>B1</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <condition>
+      <objet>C1</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <implication>
+      <objet>SYSTEM</objet>
+      <etat>PRINT</etat>
+      <valeur>A gagné</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>Recommencer</etat>
+      <valeur>[action]</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>A1</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <condition>
+      <objet>B1</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <condition>
+      <objet>C1</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <implication>
+      <objet>SYSTEM</objet>
+      <etat>PRINT</etat>
+      <valeur>B gagné</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>Recommencer</etat>
+      <valeur>[action]</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>A2</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <condition>
+      <objet>B2</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <condition>
+      <objet>C2</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <implication>
+      <objet>SYSTEM</objet>
+      <etat>PRINT</etat>
+      <valeur>A gagné</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>Recommencer</etat>
+      <valeur>[action]</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>A2</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <condition>
+      <objet>B2</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <condition>
+      <objet>C2</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <implication>
+      <objet>SYSTEM</objet>
+      <etat>PRINT</etat>
+      <valeur>B gagné</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>Recommencer</etat>
+      <valeur>[action]</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>A3</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <condition>
+      <objet>B3</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <condition>
+      <objet>C3</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <implication>
+      <objet>SYSTEM</objet>
+      <etat>PRINT</etat>
+      <valeur>A gagné</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>Recommencer</etat>
+      <valeur>[action]</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>A3</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <condition>
+      <objet>B3</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <condition>
+      <objet>C3</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <implication>
+      <objet>SYSTEM</objet>
+      <etat>PRINT</etat>
+      <valeur>B gagné</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>Recommencer</etat>
+      <valeur>[action]</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>A1</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <condition>
+      <objet>B2</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <condition>
+      <objet>C3</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <implication>
+      <objet>SYSTEM</objet>
+      <etat>PRINT</etat>
+      <valeur>A gagné</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>Recommencer</etat>
+      <valeur>[action]</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>A1</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <condition>
+      <objet>B2</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <condition>
+      <objet>C3</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <implication>
+      <objet>SYSTEM</objet>
+      <etat>PRINT</etat>
+      <valeur>B gagné</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>Recommencer</etat>
+      <valeur>[action]</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>A3</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <condition>
+      <objet>B2</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <condition>
+      <objet>C1</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par A</valeur>
+    </condition>
+    <implication>
+      <objet>SYSTEM</objet>
+      <etat>PRINT</etat>
+      <valeur>A gagné</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>Recommencer</etat>
+      <valeur>[action]</valeur>
+    </implication>
+  </regle>
+
+  <regle>
+    <condition>
+      <objet>A3</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <condition>
+      <objet>B2</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <condition>
+      <objet>C1</objet>
+      <etat>cochée</etat>
+      <valeur>cochée par B</valeur>
+    </condition>
+    <implication>
+      <objet>SYSTEM</objet>
+      <etat>PRINT</etat>
+      <valeur>B gagné</valeur>
+    </implication>
+    <implication>
+      <objet>arbitre</objet>
+      <etat>Recommencer</etat>
+      <valeur>[action]</valeur>
+    </implication>
+  </regle>
+
+</univers>
