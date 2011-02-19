@@ -14,12 +14,13 @@ from cocos.sprite import Sprite
 class PersoLayer(Layer):
 	is_event_handler = True
 
-	def __init__(self, x, y):
+	def __init__(self, bg):
 		super(PersoLayer, self).__init__()
 		sprite = Sprite('perso.png')
+		x = bg.position[0] + bg.image.width / 2
+		y = bg.position[1] + bg.image.height / 2
 		sprite.position = x, y
-		#sprite.velocity = 10, 10
-		actionL = cocos.actions.MoveBy((-x, 0), 4.)
+		actionL = cocos.actions.MoveBy((-bg.image.width / 2, 0), 2.)
 		actionR = cocos.actions.Reverse(actionL)
 		sprite.do(cocos.actions.Repeat(actionL + actionR + \
 						actionR + actionL))
@@ -38,30 +39,28 @@ class PersoLayer(Layer):
 class BgLayer(Layer):
 	def __init__(self):
 		super(BgLayer, self).__init__()
-
-	def add_image(self, image):
-		self.image = image
+		self.image = pyglet.resource.image('hopital.png')
 
 	def draw(self):
-		self.image.blit(0,0)
+		self.image.blit(0, 0)
 
 
 def main():
 	# data
 	pyglet.resource.path.append('../../challenges/challenge1/pix/')
 	pyglet.resource.reindex()
-	bg_img = pyglet.resource.image('hopital.png')
-	resolution = bg_img.width, bg_img.height
+	resolution = 800, 600
 
 	# init
 	director.init(width=resolution[0], height=resolution[1])
 
 	# scene
 	bg = BgLayer()
-	bg.add_image(bg_img)
-	perso = PersoLayer(resolution[0] / 2, resolution[1] / 2)
+	perso = PersoLayer(bg)
 
 	scene = Scene()
+	scene.position = (resolution[0] - bg.image.width) / 2, \
+			(resolution[1] - bg.image.height) / 2, 
 	scene.add(bg)
 	scene.add(perso)
 
