@@ -1,7 +1,9 @@
+#!/usr/bin/env python
 import sys
 import pyglet
-import pyglet.gl
+from pyglet.gl import *
 
+from fixed_resolution import FixedResolutionViewport
 
 
 # data
@@ -13,15 +15,18 @@ bg = pyglet.resource.image('hopital.png')
 resolution = bg.width, bg.height
 x, y = resolution[0] / 2, resolution[1] / 2
 sprite = pyglet.sprite.Sprite(img, x, y)
-win = pyglet.window.Window(resolution[0], resolution[1], caption='Astraea')
+win = pyglet.window.Window(resolution[0], resolution[1], caption='test')
+viewport = FixedResolutionViewport(win, resolution[0],
+			resolution[1], filtered=True)
 
 
 context = win.context
 config = context.config
 
 
+fps = 1. / 60.
 state = 0
-delta = 3
+delta = 2.
 fullscreen = False
 
 
@@ -42,20 +47,26 @@ fps_display = pyglet.clock.ClockDisplay()
 
 @win.event
 def on_draw():
+	viewport.begin()
+	win.clear()
+	#glClearColor(1, 1, 1, 1)
+	#glClear(GL_COLOR_BUFFER_BIT)
+	#glLoadIdentity()
 	bg.blit(0, 0)
 	sprite.draw()
 	fps_display.draw()
-
+	viewport.end()
 
 def update(dt):
+	delta2 = (delta * dt) / fps
 	global state
 	if state == 0:
-		sprite.x += delta
+		sprite.x += delta2
 		if sprite.x >= resolution[0] - img.width: state = 1
 	else:
-		sprite.x -= delta
+		sprite.x -= delta2
 		if sprite.x <= 0: state = 0
 
 	
-pyglet.clock.schedule_interval(update, 1/60.)
+pyglet.clock.schedule_interval(update, fps)
 pyglet.app.run()
