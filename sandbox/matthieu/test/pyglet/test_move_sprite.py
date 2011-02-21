@@ -24,7 +24,7 @@ context = win.context
 config = context.config
 
 
-fps = 1. / 60.
+fps = 60.
 state = 0
 delta = 2.
 fullscreen = False
@@ -49,16 +49,13 @@ fps_display = pyglet.clock.ClockDisplay()
 def on_draw():
 	viewport.begin()
 	win.clear()
-	#glClearColor(1, 1, 1, 1)
-	#glClear(GL_COLOR_BUFFER_BIT)
-	#glLoadIdentity()
 	bg.blit(0, 0)
 	sprite.draw()
 	fps_display.draw()
 	viewport.end()
 
 def update(dt):
-	delta2 = (delta * dt) / fps
+	delta2 = (delta * dt) * fps
 	global state
 	if state == 0:
 		sprite.x += delta2
@@ -68,5 +65,5 @@ def update(dt):
 		if sprite.x <= 0: state = 0
 
 	
-pyglet.clock.schedule_interval(update, fps)
+pyglet.clock.schedule_interval(update, 1. / fps)
 pyglet.app.run()

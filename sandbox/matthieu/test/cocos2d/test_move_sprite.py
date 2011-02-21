@@ -20,7 +20,7 @@ class PersoLayer(Layer):
 		x = bg.position[0] + bg.image.width / 2
 		y = bg.position[1] + bg.image.height / 2
 		sprite.position = x, y
-		actionL = cocos.actions.MoveBy((-bg.image.width / 2, 0), 2.)
+		actionL = cocos.actions.MoveBy((-bg.image.width / 2, 0), 3.)
 		actionR = cocos.actions.Reverse(actionL)
 		sprite.do(cocos.actions.Repeat(actionL + actionR + \
 						actionR + actionL))
