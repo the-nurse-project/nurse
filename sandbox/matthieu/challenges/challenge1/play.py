@@ -3,6 +3,7 @@ import numpy as np
 import pygame
 
 UPDATEEVENT = pygame.USEREVENT + 1
+fps = 60.
 
 #-------------------------------------------------------------------------------
 class Object(object):
@@ -16,8 +17,8 @@ class Universe(Object):
     update_freq: update frequency
 		'''
 		Object.__init__(self)
-		self._update_delay = int(1000 / update_freq)
-		pygame.time.set_timer(UPDATEEVENT, self._update_delay)
+		# self._update_delay = int(1000 / update_freq)
+		# pygame.time.set_timer(UPDATEEVENT, self._update_delay)
 		self._pending_events = []
 		self._fsm_list = []
 		self._visible_data = {}
@@ -39,16 +40,18 @@ class Universe(Object):
 		except IndexError: pass
 
 	def read_events(self):
-		#for e in self.get_events():
 		if len(self._pending_events) != 0:
 			e = self._pending_events.pop()
 			e.start()
 		self.sdl_device.read_events()
 
-	def receive_event(self, event):
-		if event.type == 'update':
-			for fsm in self._fsm_list:
-				fsm.update()
+	# def receive_event(self, event):
+	#	if event.type == 'update':
+	#		self.update(1.)
+
+	def update(self, dt):
+		for fsm in self._fsm_list:
+			fsm.update(dt)
 
 	def add_visible_data(self, data, layer=0):
 		self._visible_data.setdefault(layer, []).append(data)
@@ -152,7 +155,6 @@ class State(Observable):
 			obj.set_property(name, value)
 		self.on_entry()
 		self.notify("entered")
-		# print "State : ", self._name
 
 	def _signal_exited(self):
 		self.on_exit()
@@ -252,7 +254,7 @@ class Sprite(StateMachine):
 		       of the images.
     fps:             number of frames per seconds.
 		'''
-		self._frames[state] = [pygame.image.load(fname).convert() \
+		self._frames[state] = [pygame.image.load(fname) \
 					for fname in frames_fnames]
 		alpha_color = (0xff, 0, 0xff)
 		flags = pygame.constants.SRCCOLORKEY | pygame.constants.RLEACCEL
@@ -290,7 +292,7 @@ class Sprite(StateMachine):
 		id = int((time % (refresh_delay * frames_n)) / refresh_delay)
 		return frames[id], frames_center_location[id]
 
-	def update(self):
+	def update(self, dt):
 		'''
     Update sprite location (in world coordinates) according to its
     control state and current active frame
@@ -349,7 +351,7 @@ class Player(Sprite):
 
 		# FIXME : add diagonal
 		# FIXME : value of delta in pixels
-		delta = 10
+		delta = 2.
 		self._delta_moves = np.array(\
 			[[0, -delta, -delta, 0, delta, delta, delta, 0, -delta],
 			[0, 0, -delta, -delta, -delta, 0, delta, delta, delta]\
@@ -358,15 +360,17 @@ class Player(Sprite):
 				'up' : 3, 'right-up' : 4, 'right' : 5,
 				'right-down' : 6, 'down' : 7, 'left-down' : 8}
 
-	def update(self):
+	def update(self, dt):
 		state_name = self._current_state.get_name()
-		time = pygame.time.get_ticks()
-		delta = (time - self._previous_time)
-		f = float(delta) / Object.universe._update_delay
-		self._previous_time = time
+		# time = pygame.time.get_ticks()
+		# delta = (time - self._previous_time)
+		# f = float(delta) / Object.universe._update_delay
+		# self._previous_time = time
 		if state_name == 'lasy': return
 		id = self._state_name_to_id[state_name]
-		new_loc = self._location + self._delta_moves[id] * f
+		delta = (self._delta_moves[id] * dt * fps) / 1000.
+		# new_loc = self._location + self._delta_moves[id] * f
+		new_loc = self._location + delta
 		# FIXME: test if new_loc is available
 		self._location = new_loc
 		self.notify("location_changed", asynchronous=False)
@@ -377,7 +381,7 @@ class Background(Sprite):
 	def __init__(self, name=None, layer=0):
 		Sprite.__init__(self, name, layer)
 
-	def update(self):
+	def update(self, dt):
 		# FIXME : on pourrait peut-etre eviter cet appel inutile
 		# en creant une liste de sprites a updater
 		pass
@@ -401,9 +405,12 @@ class SDL_device(State):
 				if keymap[pygame.constants.K_q] or \
 					keymap[pygame.constants.K_ESCAPE]:
 					sys.exit(0)
+				elif keymap[pygame.constants.K_f]:
+					pygame.display.toggle_fullscreen()
 			if event.type == UPDATEEVENT:
-				event = UpdateEvent(self, Object.universe)
-				Object.universe.add_event(event)
+				pass
+			#	event = UpdateEvent(self, Object.universe)
+			#	Object.universe.add_event(event)
 			# filter some events
 			elif event.type not in [pygame.constants.KEYDOWN,\
 					pygame.constants.KEYUP]: return #continue
@@ -444,14 +451,12 @@ class Screen(Object):
 		delta = time - self._previous_time 
 		if delta < self._refresh_delay: return
 		# print "loop = ", float(delta) / self._refresh_delay
-		Screen.sdl_screen2.fill((0, 0, 0))
+		Screen.sdl_screen.fill((0, 0, 0))
 		data = Object.universe.get_visible_data()
 		for layer, objects in data.items(): # from bg to fg
 			for obj in objects:
 				self.display_object(obj)
 		self._previous_time = time
-		Screen.sdl_screen.blit(Screen.sdl_screen2, (0, 0))
-		pygame.display.flip()
 	
 	def display_object(self, obj):
 		time = pygame.time.get_ticks()
@@ -465,7 +470,7 @@ class Screen(Object):
 		#	elif (self.dst_pos != dst_pos).any():
 		#		print "pos = ", dst_pos
 		#		self.dst_pos = dst_pos
-		Screen.sdl_screen2.blit(frame, dst_pos, src_rect)
+		Screen.sdl_screen.blit(frame, dst_pos, src_rect)
 
 	def receive_event(self, event):
 		if event.type == 'signal':
@@ -476,7 +481,7 @@ class Screen(Object):
 #-------------------------------------------------------------------------------
 def create_bg():
 	fsm = Background('hospital', layer=0)
-	fsm.load_frames_from_filenames('__default__', ['pix2/hopital.png'],
+	fsm.load_frames_from_filenames('__default__', ['pix/hopital.png'],
 						'centered', 1)
 	fsm.set_location(np.array([-100, -100]))
 	fsm.start()
@@ -484,7 +489,7 @@ def create_bg():
 
 def create_perso():
 	fsm = Player("perso", layer=2)
-	fsm.load_frames_from_filenames('__default__', ['pix2/perso.png'],
+	fsm.load_frames_from_filenames('__default__', ['pix/perso.png'],
 						'centered_bottom', 1)
 	fsm.set_location(np.array([-260, -140]))
 	fsm.start()
@@ -493,6 +498,8 @@ def create_perso():
 #-------------------------------------------------------------------------------
 def main():
 	pygame.init()
+	pygame.font.init()
+
 	# WARNING: key event are repeated under NX
 	pygame.key.set_repeat() # prevent key repetition
 	resolution = 800, 600
@@ -500,25 +507,38 @@ def main():
 		pygame.constants.HWACCEL # | pygame.FULLSCREEN  
 	sdl_screen = pygame.display.set_mode(resolution, flags)
 	Screen.sdl_screen = sdl_screen
-	Screen.sdl_screen2 = sdl_screen.copy()
-	# print sdl_screen
-	#sys.exit(1)
 
 	#FIXME : find another way to add the device
 	Object.universe.add_sdl_device(SDL_device())
 
 	# game
-	# screen = Screen((10, 10, 300, 300), (-100, -100))
 	bg = create_bg()
 	perso = create_perso()
 	screen = Screen((0, 0, resolution[0], resolution[1]),
 				# bg.get_location(), fps=30)
 				#perso.get_location(), perso, fps=30)
 				perso.get_location(), fps=30)
+
+	font = pygame.font.Font(None, 40)
+	clock = pygame.time.Clock()
+	previous_time = pygame.time.get_ticks()
+
 	# event loop
 	while 1:
 		StateMachine.universe.read_events()
 		screen.display()
+		time = pygame.time.get_ticks()
+		dt = time - previous_time
+		if dt < (1000. / fps): continue
+		clock.tick()
+		previous_time = time
+		Object.universe.update(dt)
+		true_fps = clock.get_fps()
+		text = font.render(str(true_fps), True,
+			(255, 255, 255), (0, 0, 0))
+		# Screen.sdl_screen.blit(text, (0, resolution[1]))
+		Screen.sdl_screen.blit(text, (0, 0))
+		pygame.display.flip()
 
 
 if __name__ == "__main__" : main()
