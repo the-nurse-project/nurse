@@ -2,7 +2,6 @@ import os, sys
 import numpy as np
 import pygame
 
-UPDATEEVENT = pygame.USEREVENT + 1
 fps = 60.
 
 #-------------------------------------------------------------------------------
@@ -12,13 +11,8 @@ class Object(object):
 
 
 class Universe(Object):
-	def __init__(self, update_freq=10):
-		'''
-    update_freq: update frequency
-		'''
+	def __init__(self):
 		Object.__init__(self)
-		# self._update_delay = int(1000 / update_freq)
-		# pygame.time.set_timer(UPDATEEVENT, self._update_delay)
 		self._pending_events = []
 		self._fsm_list = []
 		self._visible_data = {}
@@ -28,8 +22,6 @@ class Universe(Object):
 
 	def add_sdl_device(self, sdl_device):
 		self.sdl_device = sdl_device
-		signal = (UPDATEEVENT, None)
-		sdl_device.attach(self, signal)
 
 	def add_event(self, event):
 		self._pending_events.append(event)
@@ -45,9 +37,8 @@ class Universe(Object):
 			e.start()
 		self.sdl_device.read_events()
 
-	# def receive_event(self, event):
-	#	if event.type == 'update':
-	#		self.update(1.)
+	def receive_event(self, event):
+		pass
 
 	def update(self, dt):
 		for fsm in self._fsm_list:
@@ -60,29 +51,30 @@ class Universe(Object):
 		return self._visible_data
 
 
-Object.universe = Universe(15)
+Object.universe = Universe()
 
 
 class Event(Object):
-	def __init__(self, sender, observer):
+	def __init__(self, sender, observers):
 		Object.__init__(self)
 		self.sender = sender
-		self.observer = observer
+		self.observers = observers
 
 	def start(self):
-		self.observer.receive_event(self)
+		for observer in self.observers:
+			observer.receive_event(self)
 
 
 class SignalEvent(Event):
-	def __init__(self, sender, observer, signal):
-		Event.__init__(self, sender, observer)
+	def __init__(self, sender, observers, signal):
+		Event.__init__(self, sender, observers)
 		self.signal = signal
 		self.type = 'signal'
 
 
 class UpdateEvent(Event):
-	def __init__(self, sender, observer):
-		Event.__init__(self, sender, observer)
+	def __init__(self, sender, observers):
+		Event.__init__(self, sender, observers)
 		self.type = 'update'
 
 
@@ -101,17 +93,24 @@ class Observable(Object):
 		except ValueError:
 			pass
 
-	def notify(self, signal, asynchronous=True):
+	def notify(self, signal, batch=True, asynchronous=True):
 		# FIXME : asynchronisme a gerer du cote de l'observer plutot
+		# FIXME : recevoir un signal non attendu est-il normal ?
 		if not self._observers.has_key(signal): return
+		observers = self._observers[signal]
 		if asynchronous:
-			for observer in self._observers[signal]:
-				event = SignalEvent(self, observer, signal)
+			if batch is True:
+				event = SignalEvent(self, observers, signal)
 				Object.universe.add_event(event)
+			else:
+				for observer in observers:
+					event = SignalEvent(self,
+							[observer], signal)
+					Object.universe.add_event(event)
 		else:
-			for observer in self._observers[signal]:
-				event = SignalEvent(self, observer, signal)
-				event.start()
+			# for synchronoous events : data are batched
+			event = SignalEvent(self, observers, signal)
+			event.start()
 
 
 class State(Observable):
@@ -312,11 +311,68 @@ class Sprite(StateMachine):
 		self._location = location
 
 
+class MovingSprite(Sprite):
+	Start_to_End = 0
+	End_to_Start = 1
+	def __init__(self, name=None, layer=2):
+		'''
+    path : list of world coordinates
+		'''
+		Sprite.__init__(self, name, layer)
+		self._path = None
+		self.direction = MovingSprite.Start_to_End
+		self._indice_states = [\
+			State("rest"), State("left"), State("left-up"),
+			State("up"), State("right-up"),
+			State("right"), State("right-down"),
+			State("down"), State("left-down")]
+		for state in self._indice_states: self.add_state(state)
+		self.set_initial_state(self._indice_states[0])
+		self._checkpoint = 0
+		self._directions = np.array([\
+			[-1., -1., 0, 1., 1., 1., 0, -1.],
+			[0, -1., -1., -1., 0, 1., 1., 1.]])
+		self._directions /= np.sqrt((self._directions ** 2).sum(axis=0))
+
+	def set_path(self, path):
+		self._path = path
+		self.current_state_from_path()
+
+	def current_state_from_path(self):
+		p = self._checkpoint
+		n = (p + 1) % len(self._path)
+		d = np.array(self._path[n]) - np.array(self._path[p])
+		if np.abs(d).sum() == 0:
+			state = 'rest'
+		else:
+			# FIXME : verifier qu'il n'y a pas d'inversion haut/bas
+			dot = np.dot(d, self._directions)
+			# (0, 0) direction has been removed
+			id = np.argmax(dot) + 1
+			print self._indice_states[id].get_name()
+			state = self._indice_states[id]
+		self.change_state(self, state)
+
+	def update(self, dt):
+		p = self._checkpoint
+		n = (p + 1) % len(self._path)
+		
+		# FIXME...
+		id = self._state_name_to_id[state_name]
+		delta = (self._delta_moves[id] * dt * fps) / 1000.
+		# new_loc = self._location + self._delta_moves[id] * f
+		new_loc = self._location + delta
+		# FIXME: test if new_loc is available
+		self._location = new_loc
+		self.notify("location_changed", asynchronous=False)
+
+
+
 
 class Player(Sprite):
 	def __init__(self, name=None, layer=2):
 		Sprite.__init__(self, name, layer)
-		states = [State("lasy"), State("left"), State("left-up"),
+		states = [State("rest"), State("left"), State("left-up"),
 			State("up"), State("right-up"),
 			State("right"), State("right-down"),
 			State("down"), State("left-down")]
@@ -356,7 +412,7 @@ class Player(Sprite):
 			[[0, -delta, -delta, 0, delta, delta, delta, 0, -delta],
 			[0, 0, -delta, -delta, -delta, 0, delta, delta, delta]\
 			]).T
-		self._state_name_to_id = {"lasy" : 0, "left" : 1, "left-up" : 2,
+		self._state_name_to_id = {"rest" : 0, "left" : 1, "left-up" : 2,
 				'up' : 3, 'right-up' : 4, 'right' : 5,
 				'right-down' : 6, 'down' : 7, 'left-down' : 8}
 
@@ -366,7 +422,7 @@ class Player(Sprite):
 		# delta = (time - self._previous_time)
 		# f = float(delta) / Object.universe._update_delay
 		# self._previous_time = time
-		if state_name == 'lasy': return
+		if state_name == 'rest': return
 		id = self._state_name_to_id[state_name]
 		delta = (self._delta_moves[id] * dt * fps) / 1000.
 		# new_loc = self._location + self._delta_moves[id] * f
@@ -407,12 +463,8 @@ class SDL_device(State):
 					sys.exit(0)
 				elif keymap[pygame.constants.K_f]:
 					pygame.display.toggle_fullscreen()
-			if event.type == UPDATEEVENT:
-				pass
-			#	event = UpdateEvent(self, Object.universe)
-			#	Object.universe.add_event(event)
 			# filter some events
-			elif event.type not in [pygame.constants.KEYDOWN,\
+			if event.type not in [pygame.constants.KEYDOWN,\
 					pygame.constants.KEYUP]: return #continue
 			else:	self.notify((event.type, event.key))
 			# print event
@@ -487,13 +539,24 @@ def create_bg():
 	fsm.start()
 	return fsm
 
-def create_perso():
-	fsm = Player("perso", layer=2)
+def create_player():
+	fsm = Player("player", layer=2)
 	fsm.load_frames_from_filenames('__default__', ['pix/perso.png'],
 						'centered_bottom', 1)
 	fsm.set_location(np.array([-260, -140]))
 	fsm.start()
 	return fsm
+
+def create_nurse():
+	fsm = MovingSprite("nurse", layer=2)
+	fsm.load_frames_from_filenames('__default__', ['pix/infirmiere.png'],
+							'centered_bottom', 1)
+	fsm.set_path(np.array([[-10, -80], [-10, -140],
+				[-260, -140], [-260, -80]]))
+	fsm.start()
+	return fsm
+
+
 
 #-------------------------------------------------------------------------------
 def main():
@@ -513,11 +576,12 @@ def main():
 
 	# game
 	bg = create_bg()
-	perso = create_perso()
+	player = create_player()
+	nurse = create_nurse()
 	screen = Screen((0, 0, resolution[0], resolution[1]),
 				# bg.get_location(), fps=30)
-				#perso.get_location(), perso, fps=30)
-				perso.get_location(), fps=30)
+				player.get_location(), player, fps=30)
+				# player.get_location(), fps=30)
 
 	font = pygame.font.Font(None, 40)
 	clock = pygame.time.Clock()
