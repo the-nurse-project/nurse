@@ -121,7 +121,6 @@ class State(Observable):
 		self._fsm = None
 		self._assign_properties = []
 		self._transitions = []
-		self._initial_state = None
 		self._updates = {}
 		if parent is not None:
 			parent._initial_state = self
@@ -136,13 +135,9 @@ class State(Observable):
 	def assign_property(self, obj, name, value):
 		self._assign_properties.append((obj, name, value))
 
-	def initial_state(self):
-		return self._initial_state
-
 	def remove_transition(self, transition):
 		self._transitions.remove(transition)
 
-	def set_initial_state(self, state):
 		self._initial_state = state
 
 	def receive_event(self, event):
@@ -187,9 +182,11 @@ class StateMachine(State):
 
 	def change_state(self, src, dst):
 		if src != self._current_state: return
-		self._current_state._signal_exited()
+		if self._current_state is not None:
+			self._current_state._signal_exited()
 		self._current_state = dst 
-		self._current_state._signal_entered()
+		if self._current_state is not None:
+			self._current_state._signal_entered()
 
 	def finished(self):
 		pass
@@ -219,10 +216,11 @@ class StateMachine(State):
 
 
 class Sprite(StateMachine):
-	def __init__(self, name=None, layer=1):
+	def __init__(self, name=None, layer=1, speed=100.):
 		'''
     name:  name of the sprite
     layer: (default: 1 since 0 is reserved for background)
+    speed: speed in world-coordinate metric per seconds
 		'''
 		StateMachine.__init__(self, name)
 		self._current_frame_id = 0
@@ -231,6 +229,7 @@ class Sprite(StateMachine):
 		self._refresh_delay = {}
 		self._location = np.zeros(2)
 		self.universe.add_visible_data(self, layer)
+		self._speed = speed
 		self._previous_time = pygame.time.get_ticks()
 
 	def load_frames_from_filenames(self, state,
@@ -314,18 +313,21 @@ class Sprite(StateMachine):
 class MovingSprite(Sprite):
 	Start_to_End = 0
 	End_to_Start = 1
-	def __init__(self, name=None, layer=2):
+	def __init__(self, name=None, layer=2, speed=100.):
 		'''
     path : list of world coordinates
 		'''
-		Sprite.__init__(self, name, layer)
+		Sprite.__init__(self, name, layer, speed)
 		self._path = None
-		self.direction = MovingSprite.Start_to_End
+		self._way = MovingSprite.Start_to_End
 		self._indice_states = [\
 			State("rest"), State("left"), State("left-up"),
 			State("up"), State("right-up"),
 			State("right"), State("right-down"),
 			State("down"), State("left-down")]
+		self._state_name_to_id = {"rest" : 0, "left" : 1, "left-up" : 2,
+				'up' : 3, 'right-up' : 4, 'right' : 5,
+				'right-down' : 6, 'down' : 7, 'left-down' : 8}
 		for state in self._indice_states: self.add_state(state)
 		self.set_initial_state(self._indice_states[0])
 		self._checkpoint = 0
@@ -336,12 +338,21 @@ class MovingSprite(Sprite):
 
 	def set_path(self, path):
 		self._path = path
-		self.current_state_from_path()
+		self.set_current_state_from_path()
+		self.set_initial_state(self._current_state)
+		self.set_location(self._path[0])
 
-	def current_state_from_path(self):
+	def get_next_checkpoint_id(self):
+		if self._way == MovingSprite.Start_to_End:
+			return (self._checkpoint + 1) % len(self._path)
+		elif self._way == MovingSprite.End_to_Start:
+			return (self._checkpoint + 1) % len(self._path)
+
+	def set_current_state_from_path(self):
 		p = self._checkpoint
-		n = (p + 1) % len(self._path)
+		n = self.get_next_checkpoint_id()
 		d = np.array(self._path[n]) - np.array(self._path[p])
+		self._current_dir = d
 		if np.abs(d).sum() == 0:
 			state = 'rest'
 		else:
@@ -349,29 +360,43 @@ class MovingSprite(Sprite):
 			dot = np.dot(d, self._directions)
 			# (0, 0) direction has been removed
 			id = np.argmax(dot) + 1
-			print self._indice_states[id].get_name()
 			state = self._indice_states[id]
-		self.change_state(self, state)
+		self.change_state(self._current_state, state)
 
 	def update(self, dt):
-		p = self._checkpoint
-		n = (p + 1) % len(self._path)
-		
-		# FIXME...
-		id = self._state_name_to_id[state_name]
-		delta = (self._delta_moves[id] * dt * fps) / 1000.
-		# new_loc = self._location + self._delta_moves[id] * f
-		new_loc = self._location + delta
+		'''
+    Update location and state of the sprite.
+
+    dt : time since last update
+		'''
 		# FIXME: test if new_loc is available
+		s = 1
+		while s > 0:
+			p = self._checkpoint
+			n = self.get_next_checkpoint_id()
+			state_name = self._current_state.get_name()
+			id = self._state_name_to_id[state_name]
+			if id == 0: return
+			delta = (self._directions.T[id - 1] * dt) * \
+				self._speed / 1000.
+			new_loc = self._location + delta
+			s = np.dot(self._current_dir, new_loc - self._path[n])
+			if s > 0:
+				# distance already covered
+				dist = np.sqrt(((self._location - \
+						self._path[n]) ** 2).sum())
+				self._location = self._path[n]
+				self._checkpoint = n
+				self.set_current_state_from_path()
+				#remaining time to cover path during this update
+				dt -= dist * 1000 / self._speed
 		self._location = new_loc
 		self.notify("location_changed", asynchronous=False)
 
 
-
-
 class Player(Sprite):
-	def __init__(self, name=None, layer=2):
-		Sprite.__init__(self, name, layer)
+	def __init__(self, name=None, layer=2, speed=100.):
+		Sprite.__init__(self, name, layer, speed)
 		states = [State("rest"), State("left"), State("left-up"),
 			State("up"), State("right-up"),
 			State("right"), State("right-down"),
@@ -406,12 +431,11 @@ class Player(Sprite):
 		states[7].add_transition(sdl_device, signal, states[0])
 
 		# FIXME : add diagonal
-		# FIXME : value of delta in pixels
-		delta = 2.
+		# FIXME : norm of diagonal moves must be equal to one
 		self._delta_moves = np.array(\
-			[[0, -delta, -delta, 0, delta, delta, delta, 0, -delta],
-			[0, 0, -delta, -delta, -delta, 0, delta, delta, delta]\
-			]).T
+			[[0, -1., -1., 0, 1., 1., 1., 0, -1.],
+			[0, 0, -1., -1., -1., 0, 1., 1., 1.]]).T
+		self._delta_moves *= self._speed
 		self._state_name_to_id = {"rest" : 0, "left" : 1, "left-up" : 2,
 				'up' : 3, 'right-up' : 4, 'right' : 5,
 				'right-down' : 6, 'down' : 7, 'left-down' : 8}
@@ -424,7 +448,7 @@ class Player(Sprite):
 		# self._previous_time = time
 		if state_name == 'rest': return
 		id = self._state_name_to_id[state_name]
-		delta = (self._delta_moves[id] * dt * fps) / 1000.
+		delta = (self._delta_moves[id] * dt / 1000.)
 		# new_loc = self._location + self._delta_moves[id] * f
 		new_loc = self._location + delta
 		# FIXME: test if new_loc is available
@@ -540,7 +564,7 @@ def create_bg():
 	return fsm
 
 def create_player():
-	fsm = Player("player", layer=2)
+	fsm = Player("player", layer=2, speed=120.)
 	fsm.load_frames_from_filenames('__default__', ['pix/perso.png'],
 						'centered_bottom', 1)
 	fsm.set_location(np.array([-260, -140]))
@@ -548,11 +572,17 @@ def create_player():
 	return fsm
 
 def create_nurse():
-	fsm = MovingSprite("nurse", layer=2)
+	fsm = MovingSprite("nurse", layer=2, speed=180.)
 	fsm.load_frames_from_filenames('__default__', ['pix/infirmiere.png'],
 							'centered_bottom', 1)
-	fsm.set_path(np.array([[-10, -80], [-10, -140],
-				[-260, -140], [-260, -80]]))
+
+	p1 = [40, -200]
+	p2 = [140, -200]
+	p3 = [140, 50]
+	p4 = [-400, 50]
+	p5 = [200, 50]
+	path = np.array([p1, p2, p3, p4, p5, p3, p2])
+	fsm.set_path(path)
 	fsm.start()
 	return fsm
 
