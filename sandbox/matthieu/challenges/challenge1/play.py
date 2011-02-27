@@ -215,6 +215,15 @@ class StateMachine(State):
 
 
 
+class Context(State):
+	pass
+
+
+class ContextManager(StateMachine):
+	def __init__(self):
+
+
+
 class Sprite(StateMachine):
 	def __init__(self, name=None, layer=1, speed=100.):
 		'''
