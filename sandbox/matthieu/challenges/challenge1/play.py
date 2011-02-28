@@ -14,11 +14,6 @@ class Universe(Object):
 	def __init__(self):
 		Object.__init__(self)
 		self._pending_events = []
-		self._fsm_list = []
-		self._visible_data = {}
-
-	def add_fsm(self, fsm):
-		self._fsm_list.append(fsm)
 
 	def add_sdl_device(self, sdl_device):
 		self.sdl_device = sdl_device
@@ -40,16 +35,6 @@ class Universe(Object):
 	def receive_event(self, event):
 		pass
 
-	def update(self, dt):
-		for fsm in self._fsm_list:
-			fsm.update(dt)
-
-	def add_visible_data(self, data, layer=0):
-		self._visible_data.setdefault(layer, []).append(data)
-
-	def get_visible_data(self):
-		return self._visible_data
-
 
 Object.universe = Universe()
 
@@ -66,9 +51,10 @@ class Event(Object):
 
 
 class SignalEvent(Event):
-	def __init__(self, sender, observers, signal):
+	def __init__(self, sender, observers, signal, signal_data):
 		Event.__init__(self, sender, observers)
 		self.signal = signal
+		self.signal_data = signal_data
 		self.type = 'signal'
 
 
@@ -93,11 +79,13 @@ class Observable(Object):
 		except ValueError:
 			pass
 
-	def notify(self, signal, batch=True, asynchronous=True):
+	def notify(self, signal, signal_data=None,
+			batch=True, asynchronous=True):
 		'''
     Notify all concerned observers that a signal has been raised.
 
     signal:            any pickable object.
+    signal_data:       additional data.
     batch:             True if all observers are notified in one event.
     asynchronous:      True if the notification is asynchronous.
 		'''
@@ -110,16 +98,18 @@ class Observable(Object):
 		if len(observers) == 0: return
 		if asynchronous:
 			if batch is True:
-				event = SignalEvent(self, observers, signal)
+				event = SignalEvent(self, observers,
+						signal, signal_data)
 				Object.universe.add_event(event)
 			else:
 				for observer in observers:
-					event = SignalEvent(self,
-							[observer], signal)
+					event = SignalEvent(self, [observer],
+							signal, signal_data)
 					Object.universe.add_event(event)
 		else:
 			# for synchronoous events : data are batched
-			event = SignalEvent(self, observers, signal)
+			event = SignalEvent(self, observers,
+					signal, signal_data)
 			event.start()
 
 
@@ -171,15 +161,55 @@ class State(Observable):
 	# signals : entered, exited
 
 
+class Context(State):
+	def __init__(self, name):
+		State.__init__(self, name)
+		self._visible_data = {}
+		self._screens = []
+		self._fsm_list = []
+
+	def add_fsm(self, fsm):
+		self._fsm_list.append(fsm)
+
+	def add_visible_data(self, data, layer=0):
+		self._visible_data.setdefault(layer, []).append(data)
+
+	def get_visible_data(self):
+		return self._visible_data
+
+	def receive_event(self, event):
+		# - try a modification of context
+		# - else notify to observers
+		try:
+			sender, state = self._updates[event.signal]
+			self._fsm.change_state(self, state)
+		except KeyError:
+			self.notify(event.signal, event.signal_data)
+
+	def add_screen(self, screen):
+		self._screens.append(screen)
+
+	def display(self):
+		for screen in self._screens:
+			screen.display(self)
+
+	def update(self, dt):
+		for fsm in self._fsm_list:
+			fsm.update(dt)
+
+
+default_context = Context('default')
+
+
 class StateMachine(State):
 	START = 0
 	STOP = 1
-	def __init__(self, name=None):
+	def __init__(self, name='state machine', context=default_context):
 		State.__init__(self, name)
 		self._initial_state = None
 		self._possible_states = {}
 		self._current_state = None
-		self.universe.add_fsm(self)
+		context.add_fsm(self)
 
 	def set_initial_state(self, state):
 		if state not in self._possible_states.values():
@@ -197,6 +227,7 @@ class StateMachine(State):
 		self._current_state = dst 
 		if self._current_state is not None:
 			self._current_state._signal_entered()
+		self.notify("state changed", (src, dst))
 
 	def finished(self):
 		pass
@@ -224,44 +255,38 @@ class StateMachine(State):
 	def post_event(self): pass #FIXME
 
 
-
-class Context(State):
-	def __init__(self, name):
-		State.__init__(self, name)
-
-	def receive_event(self, event):
-		self.notify(event.signal)
-
-
 class ContextManager(StateMachine):
 	def __init__(self):
 		StateMachine.__init__(self, 'Context Manager')
 		StateMachine.universe.sdl_device.attach(self, '__all__')
 
-	# FIXME : update needed since ContextManager is a StateMachine
-	# maybe Contextmanager can be a simple Object ?
-	def update(self, dt):
-		pass
-
 	def receive_event(self, event):
 		# FIXME : gerer les delegations partielles ?
 		self._current_state.receive_event(event)
 
+	def display(self):
+		self._current_state.display()
+
+	def update(self, dt):
+		self._current_state.update(dt)
+		
+
 
 class Sprite(StateMachine):
-	def __init__(self, name=None, layer=1, speed=100.):
+	def __init__(self, name='sprite', context=default_context,
+						layer=1, speed=100.):
 		'''
     name:  name of the sprite
     layer: (default: 1 since 0 is reserved for background)
     speed: speed in world-coordinate metric per seconds
 		'''
-		StateMachine.__init__(self, name)
+		StateMachine.__init__(self, name, context)
+		context.add_visible_data(self, layer)
 		self._current_frame_id = 0
 		self._frames = {}
 		self._frames_center_location = {}
 		self._refresh_delay = {}
 		self._location = np.zeros(2)
-		self.universe.add_visible_data(self, layer)
 		self._speed = speed
 		self._previous_time = pygame.time.get_ticks()
 
@@ -346,11 +371,12 @@ class Sprite(StateMachine):
 class MovingSprite(Sprite):
 	Start_to_End = 0
 	End_to_Start = 1
-	def __init__(self, name=None, layer=2, speed=100.):
+	def __init__(self, name='moving sprite', context=default_context,
+						layer=2, speed=100.):
 		'''
     path : list of world coordinates
 		'''
-		Sprite.__init__(self, name, layer, speed)
+		Sprite.__init__(self, name, context, layer, speed)
 		self._path = None
 		self._way = MovingSprite.Start_to_End
 		self._indice_states = [\
@@ -428,8 +454,9 @@ class MovingSprite(Sprite):
 
 
 class Player(Sprite):
-	def __init__(self, context, name=None, layer=2, speed=100.):
-		Sprite.__init__(self, name, layer, speed)
+	def __init__(self, name='sprite', context=default_context,
+						layer=2, speed=100.):
+		Sprite.__init__(self, name, context, layer, speed)
 		states = [State("rest"), State("left"), State("left-up"),
 			State("up"), State("right-up"),
 			State("right"), State("right-down"),
@@ -488,9 +515,17 @@ class Player(Sprite):
 
 
 
-class Background(Sprite):
-	def __init__(self, name=None, layer=0):
-		Sprite.__init__(self, name, layer)
+class StaticSprite(Sprite):
+	def __init__(self, name, context, layer=0, imgname=None):
+		Sprite.__init__(self, name, context, layer)
+		self.load_frames_from_filenames('__default__',
+					[imgname], 'centered', 1)
+
+	def get_frame_infos(self, time):
+		state = '__default__'
+		frames = self._frames[state]
+		frames_center_location = self._frames_center_location[state]
+		return frames[0], frames_center_location[0]
 
 	def update(self, dt):
 		# FIXME : on pourrait peut-etre eviter cet appel inutile
@@ -521,14 +556,17 @@ class SDL_device(State):
 			# filter some events
 			if event.type not in [pygame.constants.KEYDOWN,\
 					pygame.constants.KEYUP]: return #continue
-			else:	self.notify((event.type, event.key), True, False)
+			else:	self.notify((event.type, event.key),True, False)
 			# print event
 
 
 #-------------------------------------------------------------------------------
 class Screen(Object):
-	def __init__(self, geometry, focus, focus_on=None, fps=25):
+	def __init__(self, name='default_screen', geometry=(0, 0, 320, 200),
+				focus=np.array([0, 0]), focus_on=None, fps=25):
 		'''
+    name:       name of the screen
+    context:    context of the screen
     geometry:   geometry of the screen: tuple (x, y, w, h):
                 x: x position of the bottom left border in screen coordinates
                 y: y position of the bottom left border in screen coordinates
@@ -553,13 +591,13 @@ class Screen(Object):
 					self._y + self._height / 2]) - focus
 		self._focus = focus
 
-	def display(self):
+	def display(self, context=default_context):
 		time = pygame.time.get_ticks()
 		delta = time - self._previous_time 
 		if delta < self._refresh_delay: return
 		# print "loop = ", float(delta) / self._refresh_delay
 		Screen.sdl_screen.fill((0, 0, 0))
-		data = Object.universe.get_visible_data()
+		data = context.get_visible_data()
 		for layer, objects in data.items(): # from bg to fg
 			for obj in objects:
 				self.display_object(obj)
@@ -571,12 +609,6 @@ class Screen(Object):
 		if frame is None: return
 		dst_pos = self._shift + obj.get_location() - center
 		src_rect = None # pygame.Rect(x, y, w, h) # FIXME
-		#if obj._name == 'perso':
-		#	if self.dst_pos is None:
-		#		self.dst_pos = dst_pos
-		#	elif (self.dst_pos != dst_pos).any():
-		#		print "pos = ", dst_pos
-		#		self.dst_pos = dst_pos
 		Screen.sdl_screen.blit(frame, dst_pos, src_rect)
 
 	def receive_event(self, event):
@@ -587,15 +619,21 @@ class Screen(Object):
 
 #-------------------------------------------------------------------------------
 def create_bg(context):
-	fsm = Background('hospital', layer=0)
-	fsm.load_frames_from_filenames('__default__', ['pix/hopital.png'],
-						'centered', 1)
+	fsm = StaticSprite('hospital', context, layer=0,
+				imgname='pix/hopital.png')
 	fsm.set_location(np.array([-100, -100]))
 	fsm.start()
 	return fsm
 
+def create_pause(context):
+	fsm = StaticSprite('pause', context, layer=2,
+				imgname='pix/pause.png')
+	fsm.set_location(np.array([0, 0]))
+	fsm.start()
+	return fsm
+
 def create_player(context):
-	fsm = Player(context, "player", layer=2, speed=120.)
+	fsm = Player("player", context, layer=2, speed=120.)
 	fsm.load_frames_from_filenames('__default__', ['pix/perso.png'],
 						'centered_bottom', 1)
 	fsm.set_location(np.array([-260, -140]))
@@ -603,7 +641,7 @@ def create_player(context):
 	return fsm
 
 def create_nurse(context):
-	fsm = MovingSprite("nurse", layer=2, speed=180.)
+	fsm = MovingSprite("nurse", context, layer=2, speed=180.)
 	fsm.load_frames_from_filenames('__default__', ['pix/infirmiere.png'],
 							'centered_bottom', 1)
 
@@ -616,8 +654,6 @@ def create_nurse(context):
 	fsm.set_path(path)
 	fsm.start()
 	return fsm
-
-
 
 #-------------------------------------------------------------------------------
 def main():
@@ -648,15 +684,18 @@ def main():
 	context_manager.set_initial_state(context_ingame)
 	context_manager.start()
 
+	geometry = (0, 0, resolution[0], resolution[1])
+
 	bg = create_bg(context_ingame)
 	player = create_player(context_ingame)
 	nurse = create_nurse(context_ingame)
-	screen = Screen((0, 0, resolution[0], resolution[1]),
-				# bg.get_location(), fps=30)
-				player.get_location(), player, fps=30)
-				# player.get_location(), fps=30)
+	screen_game = Screen('main screen', geometry,
+		player.get_location(), player, fps=30)
+	context_ingame.add_screen(screen_game)
 
-	# FIXME et le screen dans tout ca ? il fait parti du context ?
+	pause_bg = create_pause(context_pause)
+	screen_pause = Screen('pause screen', geometry, (0, 0), fps=30)
+	context_pause.add_screen(screen_pause)
 
 	font = pygame.font.Font(None, 40)
 	clock = pygame.time.Clock()
@@ -665,17 +704,18 @@ def main():
 	# event loop
 	while 1:
 		StateMachine.universe.read_events()
-		screen.display()
+		context_manager.display()
 		time = pygame.time.get_ticks()
 		dt = time - previous_time
 		if dt < (1000. / fps): continue
-		clock.tick()
 		previous_time = time
-		Object.universe.update(dt)
+		context_manager.update(dt)
+
+		clock.tick()
 		true_fps = clock.get_fps()
 		text = font.render(str(true_fps), True,
 			(255, 255, 255), (0, 0, 0))
-		# Screen.sdl_screen.blit(text, (0, resolution[1]))
+
 		Screen.sdl_screen.blit(text, (0, 0))
 		pygame.display.flip()
 
