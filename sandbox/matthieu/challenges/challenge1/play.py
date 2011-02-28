@@ -81,7 +81,7 @@ class UpdateEvent(Event):
 class Observable(Object):
 	def __init__(self):
 		Object.__init__(self)
-		self._observers = {}
+		self._observers = {'__all__' : []}
 
 	def attach(self, observer, signal):
 		if not observer in self._observers:
@@ -94,10 +94,20 @@ class Observable(Object):
 			pass
 
 	def notify(self, signal, batch=True, asynchronous=True):
+		'''
+    Notify all concerned observers that a signal has been raised.
+
+    signal:            any pickable object.
+    batch:             True if all observers are notified in one event.
+    asynchronous:      True if the notification is asynchronous.
+		'''
 		# FIXME : asynchronisme a gerer du cote de l'observer plutot
 		# FIXME : recevoir un signal non attendu est-il normal ?
-		if not self._observers.has_key(signal): return
-		observers = self._observers[signal]
+		if self._observers.has_key(signal):
+			observers = self._observers[signal]
+		else:	observers = []
+		observers += self._observers['__all__']
+		if len(observers) == 0: return
 		if asynchronous:
 			if batch is True:
 				event = SignalEvent(self, observers, signal)
@@ -216,12 +226,26 @@ class StateMachine(State):
 
 
 class Context(State):
-	pass
+	def __init__(self, name):
+		State.__init__(self, name)
+
+	def receive_event(self, event):
+		self.notify(event.signal)
 
 
 class ContextManager(StateMachine):
 	def __init__(self):
+		StateMachine.__init__(self, 'Context Manager')
+		StateMachine.universe.sdl_device.attach(self, '__all__')
 
+	# FIXME : update needed since ContextManager is a StateMachine
+	# maybe Contextmanager can be a simple Object ?
+	def update(self, dt):
+		pass
+
+	def receive_event(self, event):
+		# FIXME : gerer les delegations partielles ?
+		self._current_state.receive_event(event)
 
 
 class Sprite(StateMachine):
@@ -404,7 +428,7 @@ class MovingSprite(Sprite):
 
 
 class Player(Sprite):
-	def __init__(self, name=None, layer=2, speed=100.):
+	def __init__(self, context, name=None, layer=2, speed=100.):
 		Sprite.__init__(self, name, layer, speed)
 		states = [State("rest"), State("left"), State("left-up"),
 			State("up"), State("right-up"),
@@ -413,31 +437,29 @@ class Player(Sprite):
 		for state in states: self.add_state(state)
 		self.set_initial_state(states[0])
 
-		sdl_device = Object.universe.sdl_device
-	
 		# left
 		signal = (pygame.constants.KEYDOWN, pygame.constants.K_LEFT)
-		states[0].add_transition(sdl_device, signal, states[1])
+		states[0].add_transition(context, signal, states[1])
 		signal = (pygame.constants.KEYUP, pygame.constants.K_LEFT)
-		states[1].add_transition(sdl_device, signal, states[0])
+		states[1].add_transition(context, signal, states[0])
 
 		# up
 		signal = (pygame.constants.KEYDOWN, pygame.constants.K_UP)
-		states[0].add_transition(sdl_device, signal, states[3])
+		states[0].add_transition(context, signal, states[3])
 		signal = (pygame.constants.KEYUP, pygame.constants.K_UP)
-		states[3].add_transition(sdl_device, signal, states[0])
+		states[3].add_transition(context, signal, states[0])
 
 		# right
 		signal = (pygame.constants.KEYDOWN, pygame.constants.K_RIGHT)
-		states[0].add_transition(sdl_device, signal, states[5])
+		states[0].add_transition(context, signal, states[5])
 		signal = (pygame.constants.KEYUP, pygame.constants.K_RIGHT)
-		states[5].add_transition(sdl_device, signal, states[0])
+		states[5].add_transition(context, signal, states[0])
 
 		# down
 		signal = (pygame.constants.KEYDOWN, pygame.constants.K_DOWN)
-		states[0].add_transition(sdl_device, signal, states[7])
+		states[0].add_transition(context, signal, states[7])
 		signal = (pygame.constants.KEYUP, pygame.constants.K_DOWN)
-		states[7].add_transition(sdl_device, signal, states[0])
+		states[7].add_transition(context, signal, states[0])
 
 		# FIXME : add diagonal
 		# FIXME : norm of diagonal moves must be equal to one
@@ -499,7 +521,7 @@ class SDL_device(State):
 			# filter some events
 			if event.type not in [pygame.constants.KEYDOWN,\
 					pygame.constants.KEYUP]: return #continue
-			else:	self.notify((event.type, event.key))
+			else:	self.notify((event.type, event.key), True, False)
 			# print event
 
 
@@ -564,7 +586,7 @@ class Screen(Object):
 
 
 #-------------------------------------------------------------------------------
-def create_bg():
+def create_bg(context):
 	fsm = Background('hospital', layer=0)
 	fsm.load_frames_from_filenames('__default__', ['pix/hopital.png'],
 						'centered', 1)
@@ -572,15 +594,15 @@ def create_bg():
 	fsm.start()
 	return fsm
 
-def create_player():
-	fsm = Player("player", layer=2, speed=120.)
+def create_player(context):
+	fsm = Player(context, "player", layer=2, speed=120.)
 	fsm.load_frames_from_filenames('__default__', ['pix/perso.png'],
 						'centered_bottom', 1)
 	fsm.set_location(np.array([-260, -140]))
 	fsm.start()
 	return fsm
 
-def create_nurse():
+def create_nurse(context):
 	fsm = MovingSprite("nurse", layer=2, speed=180.)
 	fsm.load_frames_from_filenames('__default__', ['pix/infirmiere.png'],
 							'centered_bottom', 1)
@@ -612,15 +634,29 @@ def main():
 
 	#FIXME : find another way to add the device
 	Object.universe.add_sdl_device(SDL_device())
+	context_manager = ContextManager()
+	Object.universe.context_manager = context_manager
 
-	# game
-	bg = create_bg()
-	player = create_player()
-	nurse = create_nurse()
+	# game 
+	context_ingame = Context("In game")
+	context_pause = Context("Pause")
+	signal = (pygame.constants.KEYDOWN, pygame.constants.K_p)
+	context_ingame.add_transition(context_manager, signal, context_pause)
+	context_pause.add_transition(context_manager, signal, context_ingame)
+	context_manager.add_state(context_ingame)
+	context_manager.add_state(context_pause)
+	context_manager.set_initial_state(context_ingame)
+	context_manager.start()
+
+	bg = create_bg(context_ingame)
+	player = create_player(context_ingame)
+	nurse = create_nurse(context_ingame)
 	screen = Screen((0, 0, resolution[0], resolution[1]),
 				# bg.get_location(), fps=30)
 				player.get_location(), player, fps=30)
 				# player.get_location(), fps=30)
+
+	# FIXME et le screen dans tout ca ? il fait parti du context ?
 
 	font = pygame.font.Font(None, 40)
 	clock = pygame.time.Clock()
