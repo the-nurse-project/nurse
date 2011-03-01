@@ -120,29 +120,29 @@ class State(Observable):
 		self._name = name
 		self._fsm = None
 		self._assign_properties = []
-		self._transitions = []
-		self._updates = {}
+		self._transitions = {}
 		if parent is not None:
 			parent._initial_state = self
 
 	def get_name(self):
 		return self._name
 
-	def add_transition(self, sender, signal, state):	
+	def add_transition(self, sender, signal, state,
+			src_prop={}, dst_prop={}):
 		sender.attach(self, signal)
-		self._updates[signal] = (sender, state)
+		self._transitions[signal] = (sender, state, src_prop, dst_prop)
 
 	def assign_property(self, obj, name, value):
 		self._assign_properties.append((obj, name, value))
 
 	def remove_transition(self, transition):
-		self._transitions.remove(transition)
-
+		del self._transitions[transition]
 		self._initial_state = state
 
 	def receive_event(self, event):
-		sender, state = self._updates[event.signal]
-		self._fsm.change_state(self, state)
+		sender, state, src_prop, dst_prop = \
+			self._transitions[event.signal]
+		self._fsm.change_state(self, state, src_prop, dst_prop)
 
 	def _signal_entered(self):
 		for (obj, name, value) in self._assign_properties:
@@ -158,15 +158,17 @@ class State(Observable):
 
 	def on_exit(self): pass
 
-	# signals : entered, exited
-
 
 class Context(State):
-	def __init__(self, name):
+	def __init__(self, name, is_visible=True, is_active=True,
+					is_receiving_events=True):
 		State.__init__(self, name)
 		self._visible_data = {}
 		self._screens = []
 		self._fsm_list = []
+		self.is_visible = is_visible
+		self.is_active = is_active
+		self.is_receiving_events = is_receiving_events
 
 	def add_fsm(self, fsm):
 		self._fsm_list.append(fsm)
@@ -176,15 +178,6 @@ class Context(State):
 
 	def get_visible_data(self):
 		return self._visible_data
-
-	def receive_event(self, event):
-		# - try a modification of context
-		# - else notify to observers
-		try:
-			sender, state = self._updates[event.signal]
-			self._fsm.change_state(self, state)
-		except KeyError:
-			self.notify(event.signal, event.signal_data)
 
 	def add_screen(self, screen):
 		self._screens.append(screen)
@@ -196,6 +189,9 @@ class Context(State):
 	def update(self, dt):
 		for fsm in self._fsm_list:
 			fsm.update(dt)
+
+	def delegate(self, event):
+		self.notify(event.signal, event.signal_data)
 
 
 default_context = Context('default')
@@ -220,13 +216,15 @@ class StateMachine(State):
 		self._possible_states[state.get_name()] = state
 		state._fsm = self
 
-	def change_state(self, src, dst):
+	def change_state(self, src, dst, src_prop={}, dst_prop={}):
 		if src != self._current_state: return
 		if self._current_state is not None:
 			self._current_state._signal_exited()
 		self._current_state = dst 
 		if self._current_state is not None:
 			self._current_state._signal_entered()
+		for k, v in src_prop.items(): src.set_property(k, v)
+		for k, v in dst_prop.items(): dst.set_property(k, v)
 		self.notify("state changed", (src, dst))
 
 	def finished(self):
@@ -261,15 +259,25 @@ class ContextManager(StateMachine):
 		StateMachine.universe.sdl_device.attach(self, '__all__')
 
 	def receive_event(self, event):
-		# FIXME : gerer les delegations partielles ?
-		self._current_state.receive_event(event)
+		# - try to modify the current context
+		# - then notify observers
+		try:
+			self._current_state.receive_event(event)
+		except KeyError:
+			for state in self._possible_states.values():
+				if state.is_receiving_events:
+					state.delegate(event)
 
 	def display(self):
-		self._current_state.display()
+		Screen.sdl_screen.fill((0, 0, 0))
+		for state in self._possible_states.values():
+			if state.is_visible:
+				state.display()
 
 	def update(self, dt):
-		self._current_state.update(dt)
-		
+		for state in self._possible_states.values():
+			if state.is_active:
+				state.update(dt)
 
 
 class Sprite(StateMachine):
@@ -528,9 +536,28 @@ class StaticSprite(Sprite):
 		return frames[0], frames_center_location[0]
 
 	def update(self, dt):
-		# FIXME : on pourrait peut-etre eviter cet appel inutile
-		# en creant une liste de sprites a updater
 		pass
+
+
+class UniformLayer(Sprite):
+	def __init__(self, name, context, layer=2, color=(0, 0, 0), alpha=128):
+		Sprite.__init__(self, name, context, layer)
+		self._color = color
+		self._surface = Screen.sdl_screen.convert()
+		self._surface.fill((0, 0, 0))
+		self._surface.set_alpha(alpha)
+		Sprite.set_location(self, np.array([0, 0]))
+		self._center = np.array(self._surface.get_size()) /2.
+	
+	def set_location(self, location):
+		pass
+
+	def get_frame_infos(self, time):
+		return self._surface, self._center
+
+	def update(self, dt):
+		pass
+
 
 #-------------------------------------------------------------------------------
 class SDL_device(State):
@@ -563,7 +590,7 @@ class SDL_device(State):
 #-------------------------------------------------------------------------------
 class Screen(Object):
 	def __init__(self, name='default_screen', geometry=(0, 0, 320, 200),
-				focus=np.array([0, 0]), focus_on=None, fps=25):
+				focus=np.array([0, 0]), focus_on=None):
 		'''
     name:       name of the screen
     context:    context of the screen
@@ -582,8 +609,6 @@ class Screen(Object):
 		self.set_focus(focus)
 		if focus_on is not None:
 			focus_on.attach(self, "location_changed")
-		self._refresh_delay = int(1000 / fps) # delay in milliseconds
-		self._previous_time = pygame.time.get_ticks()
 		self.dst_pos = None
 
 	def set_focus(self, focus):
@@ -592,16 +617,10 @@ class Screen(Object):
 		self._focus = focus
 
 	def display(self, context=default_context):
-		time = pygame.time.get_ticks()
-		delta = time - self._previous_time 
-		if delta < self._refresh_delay: return
-		# print "loop = ", float(delta) / self._refresh_delay
-		Screen.sdl_screen.fill((0, 0, 0))
 		data = context.get_visible_data()
 		for layer, objects in data.items(): # from bg to fg
 			for obj in objects:
 				self.display_object(obj)
-		self._previous_time = time
 	
 	def display_object(self, obj):
 		time = pygame.time.get_ticks()
@@ -675,10 +694,19 @@ def main():
 
 	# game 
 	context_ingame = Context("In game")
-	context_pause = Context("Pause")
+	context_pause = Context("Pause", is_visible=False,
+		is_active=False, is_receiving_events=False)
 	signal = (pygame.constants.KEYDOWN, pygame.constants.K_p)
-	context_ingame.add_transition(context_manager, signal, context_pause)
-	context_pause.add_transition(context_manager, signal, context_ingame)
+	context_ingame.add_transition(context_manager, signal, context_pause,
+		{ 'is_visible' : True, 'is_active' : False,
+		'is_receiving_events' : False},
+		{ 'is_visible' : True, 'is_active' : True,
+		'is_receiving_events' : True})
+	context_pause.add_transition(context_manager, signal, context_ingame,
+		{ 'is_visible' : False, 'is_active' : False,
+		'is_receiving_events' : False},
+		{ 'is_visible' : True, 'is_active' : True,
+		'is_receiving_events' : True})
 	context_manager.add_state(context_ingame)
 	context_manager.add_state(context_pause)
 	context_manager.set_initial_state(context_ingame)
@@ -690,13 +718,17 @@ def main():
 	player = create_player(context_ingame)
 	nurse = create_nurse(context_ingame)
 	screen_game = Screen('main screen', geometry,
-		player.get_location(), player, fps=30)
+		player.get_location(), player)
 	context_ingame.add_screen(screen_game)
 
 	pause_bg = create_pause(context_pause)
-	screen_pause = Screen('pause screen', geometry, (0, 0), fps=30)
+	uniform = UniformLayer('dark', context_pause, layer=0,
+				color=(0, 0, 0), alpha=128)
+	uniform.start()
+	screen_pause = Screen('pause screen', geometry, (0, 0))
 	context_pause.add_screen(screen_pause)
 
+	
 	font = pygame.font.Font(None, 40)
 	clock = pygame.time.Clock()
 	previous_time = pygame.time.get_ticks()
@@ -704,11 +736,11 @@ def main():
 	# event loop
 	while 1:
 		StateMachine.universe.read_events()
-		context_manager.display()
 		time = pygame.time.get_ticks()
 		dt = time - previous_time
 		if dt < (1000. / fps): continue
 		previous_time = time
+		context_manager.display()
 		context_manager.update(dt)
 
 		clock.tick()
