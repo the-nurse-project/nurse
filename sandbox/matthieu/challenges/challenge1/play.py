@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: iso-8859-15 -*-
 import os, sys
 import numpy as np
 import pygame
@@ -51,7 +53,7 @@ class Event(Object):
 
 
 class SignalEvent(Event):
-	def __init__(self, sender, observers, signal, signal_data):
+	def __init__(self, sender, observers, signal, signal_data=None):
 		Event.__init__(self, sender, observers)
 		self.signal = signal
 		self.signal_data = signal_data
@@ -114,15 +116,13 @@ class Observable(Object):
 
 
 class State(Observable):
-	def __init__(self, name, parent=None):
+	def __init__(self, name):
 		Observable.__init__(self)
 		# FIXME : parent/child/hiearchical state not handle yet
 		self._name = name
 		self._fsm = None
 		self._assign_properties = []
 		self._transitions = {}
-		if parent is not None:
-			parent._initial_state = self
 
 	def get_name(self):
 		return self._name
@@ -192,6 +192,14 @@ class Context(State):
 
 	def delegate(self, event):
 		self.notify(event.signal, event.signal_data)
+
+
+class Text(State):
+	def __init__(self, name, perso, text, writing_machine_mode=True):
+		State.__init__(self, name)
+		self.perso = perso
+		self.text = text
+		self.writing_machine_mode = writing_machine_mode
 
 
 default_context = Context('default')
@@ -540,13 +548,17 @@ class StaticSprite(Sprite):
 
 
 class UniformLayer(Sprite):
-	def __init__(self, name, context, layer=2, color=(0, 0, 0), alpha=128):
+	def __init__(self, name, context, layer=2, size=None,
+			shift=(0, 0), color=(0, 0, 0), alpha=128):
 		Sprite.__init__(self, name, context, layer)
 		self._color = color
-		self._surface = Screen.sdl_screen.convert()
-		self._surface.fill((0, 0, 0))
+		if size is not None:
+			flags = Screen.sdl_screen.get_flags()
+			self._surface = pygame.Surface(size, flags)
+		else:	self._surface = Screen.sdl_screen.convert()
+		self._surface.fill(color)
 		self._surface.set_alpha(alpha)
-		Sprite.set_location(self, np.array([0, 0]))
+		Sprite.set_location(self, np.array(shift))
 		self._center = np.array(self._surface.get_size()) /2.
 	
 	def set_location(self, location):
@@ -557,6 +569,11 @@ class UniformLayer(Sprite):
 
 	def update(self, dt):
 		pass
+
+
+class Dialog(StateMachine):
+	def __init__(self, name, context, layer=2):
+		StateMachine.__init__(self, 'dialog')
 
 
 #-------------------------------------------------------------------------------
@@ -642,14 +659,16 @@ def create_bg(context):
 				imgname='pix/hopital.png')
 	fsm.set_location(np.array([-100, -100]))
 	fsm.start()
-	return fsm
 
 def create_pause(context):
 	fsm = StaticSprite('pause', context, layer=2,
 				imgname='pix/pause.png')
 	fsm.set_location(np.array([0, 0]))
 	fsm.start()
-	return fsm
+	uniform = UniformLayer('dark', context, layer=0,
+				color=(0, 0, 0), alpha=128)
+	uniform.start()
+
 
 def create_player(context):
 	fsm = Player("player", context, layer=2, speed=120.)
@@ -660,19 +679,58 @@ def create_player(context):
 	return fsm
 
 def create_nurse(context):
-	fsm = MovingSprite("nurse", context, layer=2, speed=180.)
-	fsm.load_frames_from_filenames('__default__', ['pix/infirmiere.png'],
-							'centered_bottom', 1)
-
 	p1 = [40, -200]
 	p2 = [140, -200]
 	p3 = [140, 50]
 	p4 = [-400, 50]
 	p5 = [200, 50]
 	path = np.array([p1, p2, p3, p4, p5, p3, p2])
+	fsm = MovingSprite("nurse", context, layer=2, speed=180.)
+	fsm.load_frames_from_filenames('__default__', ['pix/infirmiere.png'],
+							'centered_bottom', 1)
 	fsm.set_path(path)
 	fsm.start()
 	return fsm
+
+def create_dialog(context):
+	uniform = UniformLayer('dark', context, layer=0,
+				color=(0, 0, 0), alpha=128)
+	uniform.start()
+	w, h = Screen.sdl_screen.get_width(), Screen.sdl_screen.get_height()
+	w *= 0.8
+	h *= 0.3
+	uniform = UniformLayer('dial1', context, layer=1, size=(w, h),
+				shift=(0, h), color=(255, 255, 255), alpha=256)
+	uniform.start()
+	w -= 2
+	h -= 2
+	uniform = UniformLayer('dial2', context, layer=2, size=(w, h),
+				shift=(0, h + 2), color=(0, 0, 64), alpha=256)
+	uniform.start()
+	w, h = Screen.sdl_screen.get_width(), Screen.sdl_screen.get_height()
+	w *= 0.8 * 0.98
+	h *= 0.3 * 0.9
+	uniform = UniformLayer('dial3', context, layer=3, size=(w, h),
+			shift=(0, h * 1.12), color=(0, 0, 128), alpha=256)
+	uniform.start()
+	dialog = Dialog('dialog', context, layer=1)
+	msg = [
+		('player', '...<20>...<20>mmm...<20>où...où suis-je ?\n' + \
+		"ahh...mes yeux !\n" + \
+		"Laissons à mes yeux le temps de s'habituer\n", True), 
+		('player', "Mais<20>c'est un hopital !\n" + \
+		"Voyons. Jambes...<20>OK. Bras...<20>OK. Tete...<20>OK.", True),
+		('nurse', "Ho! J'ai entendu du bruit dans la chambre " + \
+		"d'à côté", False)
+	]
+	for i, (perso, txt, writing_machine_mode) in enumerate(msg):
+		state = Text('state_%d' % i, perso, txt, writing_machine_mode)
+		dialog.add_state(state)
+	dialog.start()
+	sprite = StaticSprite('sprite', context, layer=4,
+				imgname='pix/perso.png')
+	sprite.set_location(np.array([-270, 180]))
+	sprite.start()
 
 #-------------------------------------------------------------------------------
 def main():
@@ -692,43 +750,57 @@ def main():
 	context_manager = ContextManager()
 	Object.universe.context_manager = context_manager
 
-	# game 
+	# manage context
+	properties_all_active = { 'is_visible' : True, 'is_active' : True,
+				'is_receiving_events' : True}
+	properties_all_inactive = { 'is_visible' : False, 'is_active' : False,
+				'is_receiving_events' : False} 
+	properties_game_inpause = { 'is_visible' : True, 'is_active' : False,
+				'is_receiving_events' : False}
 	context_ingame = Context("In game")
-	context_pause = Context("Pause", is_visible=False,
-		is_active=False, is_receiving_events=False)
-	signal = (pygame.constants.KEYDOWN, pygame.constants.K_p)
-	context_ingame.add_transition(context_manager, signal, context_pause,
-		{ 'is_visible' : True, 'is_active' : False,
-		'is_receiving_events' : False},
-		{ 'is_visible' : True, 'is_active' : True,
-		'is_receiving_events' : True})
-	context_pause.add_transition(context_manager, signal, context_ingame,
-		{ 'is_visible' : False, 'is_active' : False,
-		'is_receiving_events' : False},
-		{ 'is_visible' : True, 'is_active' : True,
-		'is_receiving_events' : True})
+	context_dialog = Context("Dialog", **properties_all_inactive)
+	context_pause = Context("Pause", **properties_all_inactive)
+	signal_pause = (pygame.constants.KEYDOWN, pygame.constants.K_p)
+	signal_dialog_on = "dialog_on"
+	signal_dialog_off = "dialog_off"
+	context_ingame.add_transition(context_manager, signal_pause,
+		context_pause, properties_game_inpause, properties_all_active)
+	context_pause.add_transition(context_manager, signal_pause,
+		context_ingame, properties_all_inactive, properties_all_active)
+	context_ingame.add_transition(context_manager, signal_dialog_on,
+		context_dialog, properties_game_inpause, properties_all_active)
+	context_dialog.add_transition(context_manager, signal_dialog_off,
+		context_ingame, properties_all_inactive, properties_all_active)
 	context_manager.add_state(context_ingame)
 	context_manager.add_state(context_pause)
+	context_manager.add_state(context_dialog)
 	context_manager.set_initial_state(context_ingame)
 	context_manager.start()
 
+	event = SignalEvent(None, [context_manager], signal_dialog_on)
+	event.start()
+
 	geometry = (0, 0, resolution[0], resolution[1])
 
-	bg = create_bg(context_ingame)
+	# ingame context
+	create_bg(context_ingame)
 	player = create_player(context_ingame)
-	nurse = create_nurse(context_ingame)
+	create_nurse(context_ingame)
 	screen_game = Screen('main screen', geometry,
 		player.get_location(), player)
 	context_ingame.add_screen(screen_game)
 
-	pause_bg = create_pause(context_pause)
-	uniform = UniformLayer('dark', context_pause, layer=0,
-				color=(0, 0, 0), alpha=128)
-	uniform.start()
-	screen_pause = Screen('pause screen', geometry, (0, 0))
-	context_pause.add_screen(screen_pause)
+	# pause context
+	create_pause(context_pause)
+	screen_fixed = Screen('fixed screen', geometry, (0, 0))
+	context_pause.add_screen(screen_fixed)
 
-	
+	# dialog context
+	create_dialog(context_dialog)
+	screen_fixed = Screen('fixed screen', geometry, (0, 0))
+	context_dialog.add_screen(screen_fixed)
+
+	# FPS	
 	font = pygame.font.Font(None, 40)
 	clock = pygame.time.Clock()
 	previous_time = pygame.time.get_ticks()
