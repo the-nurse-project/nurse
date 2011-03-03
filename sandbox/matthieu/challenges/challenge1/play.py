@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: iso-8859-15 -*-
-import os, sys
+import os, sys, uuid
 import numpy as np
 import pygame
 
@@ -283,6 +283,7 @@ class ContextManager(StateMachine):
 		for state in self._possible_states.values():
 			if state.is_visible:
 				state.display()
+		default_displayer.flip()
 
 	def update(self, dt):
 		for state in self._possible_states.values():
@@ -328,12 +329,8 @@ class Sprite(StateMachine):
 		       of the images.
     fps:             number of frames per seconds.
 		'''
-		self._frames[state] = [pygame.image.load(fname) \
+		self._frames[state] = [default_displayer.load_image(fname) \
 					for fname in frames_fnames]
-		alpha_color = (0xff, 0, 0xff)
-		flags = pygame.constants.SRCCOLORKEY | pygame.constants.RLEACCEL
-		for img in self._frames[state]:
-			img.set_colorkey(alpha_color, flags)
 		self._refresh_delay[state] = int(1000 / fps)
 		loc = []
 		if isinstance(center_location, str):
@@ -351,7 +348,7 @@ class Sprite(StateMachine):
 
 	def get_frame_infos(self, time):
 		'''
-    Return frame infos for a given time : image, center location
+    Return frame infos for a given time : image uuid, center location
 		'''
 		state = self._current_state
 		try:
@@ -574,6 +571,17 @@ class Dialog(StateMachine):
 		context.add_visible_data(self, layer)
 
 
+class FpsSprite(StateMachine):
+	def __init__(self, name='fps', context=default_context, layer=3,
+		fg_color=(255, 255, 255), bg_color=(0, 0, 0)):
+		StateMachine.__init__(self, name, context)
+		self.fg_color = fg_color
+		self.bg_color = bg_color
+		context.add_visible_data(self, layer)
+
+	def update(self, dt):
+		pass
+
 #-------------------------------------------------------------------------------
 class SDL_device(State):
 	def __init__(self):
@@ -603,22 +611,51 @@ class SDL_device(State):
 
 
 #-------------------------------------------------------------------------------
+class ImageProxy(object):
+	def __init__(self, raw_image):
+		self._raw_image = raw_image
+
+	def get_raw_image(self):
+		return self._raw_image
+
+
+class SdlImageProxy(ImageProxy):
+	def __init__(self, raw_image):
+		ImageProxy.__init__(self, raw_image)
+
+	def get_size(self):
+		return self._raw_image.get_size()
+
+
+class PygletImageProxy(ImageProxy):
+	def __init__(self, raw_image):
+		ImageProxy.__init__(self, raw_image)
+
+	def get_size(self):
+		return self._raw_image.get_size()
+
+
+
+#-------------------------------------------------------------------------------
 class Displayer(object):
 	def display(self, screen, obj):
 		if isinstance(obj, Sprite):
 			type = 'sprite'
 		elif isinstance(obj, Dialog):
 			type = 'dialog'
+		elif isinstance(obj, FpsSprite):
+			type = 'fps'
 		else:	type = None
 		self.display_map[type](self, screen, obj)
 
 	def display_sprite(self, screen, sprite):
 		time = pygame.time.get_ticks()
-		frame, center = sprite.get_frame_infos(time)
-		if frame is None: return
+		frame_proxy, center = sprite.get_frame_infos(time)
+		if frame_proxy is None: return
+		raw_img = frame_proxy.get_raw_image()
 		dst_pos = screen.get_shift() + sprite.get_location() - center
 		src_rect = None # FIXME : clip the area to blit
-		return (frame, dst_pos, src_rect)
+		return (raw_img, dst_pos, src_rect)
 
 	def flip(self):
 		raise NotImplementedError
@@ -635,7 +672,11 @@ class SdlDisplayer(Displayer):
 
 	def __init__(self, resolution, flags):
 		Displayer.__init__(self)
+		pygame.init()
+		pygame.font.init()
 		self.screen = pygame.display.set_mode(resolution, flags)
+		self._clock = pygame.time.Clock()
+		self._font = pygame.font.Font(None, 40)
 
 	def display_sprite(self, screen, sprite):
 		res = Displayer.display_sprite(self, screen, sprite)
@@ -644,6 +685,13 @@ class SdlDisplayer(Displayer):
 	def display_dialog(self, screen, dialog):
 		# FIXME
 		pass
+
+	def display_fps(self, screen, fps):
+		self._clock.tick()
+		true_fps = self._clock.get_fps()
+		text = self._font.render(str(true_fps), True,
+			fps.fg_color, fps.bg_color)
+		self.screen.blit(text, (0, 0)) #FIXME
 
 	def flip(self):
 		pygame.display.flip() #FIXME
@@ -658,11 +706,63 @@ class SdlDisplayer(Displayer):
 		else:	surface = self.screen.convert()
 		surface.fill(color)
 		surface.set_alpha(alpha)
-		return surface
+		return SdlImageProxy(surface)
+
+	def load_image(self, filename):
+		surface = pygame.image.load(filename)
+		alpha_color = (0xff, 0, 0xff)
+		flags = pygame.constants.SRCCOLORKEY | pygame.constants.RLEACCEL
+		surface.set_colorkey(alpha_color, flags)
+		return SdlImageProxy(surface)
 		
 
 SdlDisplayer.display_map.update({ 'sprite' : SdlDisplayer.display_sprite,
-				'dialog' : SdlDisplayer.display_dialog})
+				'dialog' : SdlDisplayer.display_dialog,
+				'fps' : SdlDisplayer.display_fps})
+
+
+class PygletDisplayer(Displayer):
+	display_map = {}
+
+	def __init__(self, resolution, caption):
+		Displayer.__init__(self)
+		pyglet.resource.path.append('pix/')
+		pyglet.resource.reindex()
+		self._win = pyglet.window.Window(resolution[0], resolution[1],
+							caption=caption)
+		self._fps_display = pyglet.clock.ClockDisplay()
+
+	def display_sprite(self, screen, sprite):
+		raw_img, dst_pos, src_rect = Displayer.display_sprite(self,
+							screen, sprite)
+		raw_img.blit(*dst_pos)
+		# FIXME use src_rect
+
+	def display_dialog(self, screen, dialog):
+		pass # FIXME
+
+	def display_fps(self, screen, fps):
+		self._fps_display.draw()
+
+	def flip(self):
+		pass # nothing to do
+
+	def clean(self):
+		self._win.clear()
+
+	def get_uniform_surface(self, size=None, color=(0, 0, 0), alpha=128):
+		surface = None # FIXME
+		return PygletImageProxy(surface)
+
+	def load_image(self, filename):
+		img = pyglet.resource.image(filename)
+		return PygletImageProxy(img)
+
+PygletDisplayer.display_map.update({ 'sprite' : PygletDisplayer.display_sprite,
+				'dialog' : PygletDisplayer.display_dialog,
+				'fps' : PygletDisplayer.display_fps})
+
+
 	
 resolution = 800, 600
 flags = pygame.constants.DOUBLEBUF | pygame.constants.HWSURFACE | \
@@ -670,13 +770,8 @@ flags = pygame.constants.DOUBLEBUF | pygame.constants.HWSURFACE | \
 default_displayer = SdlDisplayer(resolution, flags)
 
 
-# FIXME : add PygletDisplayer
-
 
 #-------------------------------------------------------------------------------
-class Screen(Object):
-	pass #FIXME : a virer ?
-
 class VirtualScreen(Object):
 	def __init__(self, name='default_screen', geometry=(0, 0, 320, 200),
 				focus=np.array([0, 0]), focus_on=None,
@@ -782,11 +877,12 @@ def create_dialog(context):
 	msg = [
 		('player', '...<20>...<20>mmm...<20>où...où suis-je ?\n' + \
 		"ahh...mes yeux !\n" + \
-		"Laissons à mes yeux le temps de s'habituer\n", True), 
+		"Laissons leur le temps de s'habituer\n", True), 
 		('player', "Mais<20>c'est un hopital !\n" + \
 		"Voyons. Jambes...<20>OK. Bras...<20>OK. Tete...<20>OK.", True),
 		('nurse', "Ho! J'ai entendu du bruit dans la chambre " + \
-		"d'à côté", False)
+		"d'à côté", False),
+		('player', 'Bon...allons chercher des renseignements.', True)
 	]
 	for i, (perso, txt, writing_machine_mode) in enumerate(msg):
 		state = Text('state_%d' % i, perso, txt, writing_machine_mode)
@@ -799,9 +895,6 @@ def create_dialog(context):
 
 #-------------------------------------------------------------------------------
 def main():
-	pygame.init()
-	pygame.font.init()
-
 	# WARNING: key event are repeated under NX
 	pygame.key.set_repeat() # prevent key repetition
 
@@ -820,6 +913,7 @@ def main():
 	context_ingame = Context("In game")
 	context_dialog = Context("Dialog", **properties_all_inactive)
 	context_pause = Context("Pause", **properties_all_inactive)
+	context_fps = Context("fps", **properties_all_active)
 	signal_pause = (pygame.constants.KEYDOWN, pygame.constants.K_p)
 	signal_dialog_on = "dialog_on"
 	signal_dialog_off = "dialog_off"
@@ -834,11 +928,12 @@ def main():
 	context_manager.add_state(context_ingame)
 	context_manager.add_state(context_pause)
 	context_manager.add_state(context_dialog)
+	context_manager.add_state(context_fps)
 	context_manager.set_initial_state(context_ingame)
 	context_manager.start()
 
 	event = SignalEvent(None, [context_manager], signal_dialog_on)
-	event.start()
+	#event.start()
 
 	geometry = (0, 0, resolution[0], resolution[1])
 
@@ -847,7 +942,7 @@ def main():
 	player = create_player(context_ingame)
 	create_nurse(context_ingame)
 	screen_game = VirtualScreen('main screen', geometry,
-		player.get_location(), player)
+				player.get_location(), player)
 	context_ingame.add_screen(screen_game)
 
 	# pause context
@@ -857,13 +952,14 @@ def main():
 
 	# dialog context
 	create_dialog(context_dialog)
-	screen_fixed = VirtualScreen('fixed screen', geometry, (0, 0))
 	context_dialog.add_screen(screen_fixed)
 
-	# FPS	
+	# fps context
+	fps_sprite = FpsSprite('fps', context_fps)
+	context_fps.add_screen(screen_fixed)
+
+	# FPS
 	fps = 60.
-	font = pygame.font.Font(None, 40)
-	clock = pygame.time.Clock()
 	previous_time = pygame.time.get_ticks()
 
 	# event loop
@@ -875,14 +971,6 @@ def main():
 		previous_time = time
 		context_manager.display()
 		context_manager.update(dt)
-
-		# FIXME : move, deps on SDL + deps on the default_displayer
-		clock.tick()
-		true_fps = clock.get_fps()
-		text = font.render(str(true_fps), True,
-			(255, 255, 255), (0, 0, 0))
-		default_displayer.screen.blit(text, (0, 0)) #FIXME
-		default_displayer.flip()
 
 
 if __name__ == "__main__" : main()
