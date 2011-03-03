@@ -4,8 +4,6 @@ import os, sys
 import numpy as np
 import pygame
 
-fps = 60.
-
 #-------------------------------------------------------------------------------
 class Object(object):
 	def set_property(self, name, value):
@@ -183,9 +181,12 @@ class Context(State):
 		self._screens.append(screen)
 
 	def display(self):
+		data = self.get_visible_data()
 		for screen in self._screens:
-			screen.display(self)
-
+			for layer, objects in data.items(): # from bg to fg
+				for obj in objects:
+					screen.display(obj)
+	
 	def update(self, dt):
 		for fsm in self._fsm_list:
 			fsm.update(dt)
@@ -277,7 +278,8 @@ class ContextManager(StateMachine):
 					state.delegate(event)
 
 	def display(self):
-		Screen.sdl_screen.fill((0, 0, 0))
+		global default_displayer #FIXME: if several displayer ?
+		default_displayer.clean()
 		for state in self._possible_states.values():
 			if state.is_visible:
 				state.display()
@@ -551,13 +553,8 @@ class UniformLayer(Sprite):
 	def __init__(self, name, context, layer=2, size=None,
 			shift=(0, 0), color=(0, 0, 0), alpha=128):
 		Sprite.__init__(self, name, context, layer)
-		self._color = color
-		if size is not None:
-			flags = Screen.sdl_screen.get_flags()
-			self._surface = pygame.Surface(size, flags)
-		else:	self._surface = Screen.sdl_screen.convert()
-		self._surface.fill(color)
-		self._surface.set_alpha(alpha)
+		self._surface = default_displayer.get_uniform_surface(size,
+								color, alpha)
 		Sprite.set_location(self, np.array(shift))
 		self._center = np.array(self._surface.get_size()) /2.
 	
@@ -574,6 +571,7 @@ class UniformLayer(Sprite):
 class Dialog(StateMachine):
 	def __init__(self, name, context, layer=2):
 		StateMachine.__init__(self, 'dialog')
+		context.add_visible_data(self, layer)
 
 
 #-------------------------------------------------------------------------------
@@ -605,9 +603,84 @@ class SDL_device(State):
 
 
 #-------------------------------------------------------------------------------
+class Displayer(object):
+	def display(self, screen, obj):
+		if isinstance(obj, Sprite):
+			type = 'sprite'
+		elif isinstance(obj, Dialog):
+			type = 'dialog'
+		else:	type = None
+		self.display_map[type](self, screen, obj)
+
+	def display_sprite(self, screen, sprite):
+		time = pygame.time.get_ticks()
+		frame, center = sprite.get_frame_infos(time)
+		if frame is None: return
+		dst_pos = screen.get_shift() + sprite.get_location() - center
+		src_rect = None # FIXME : clip the area to blit
+		return (frame, dst_pos, src_rect)
+
+	def flip(self):
+		raise NotImplementedError
+
+	def clean(self):
+		raise NotImplementedError
+
+	def get_uniform_surface(self, size=None, color=(0, 0, 0), alpha=128):
+		raise NotImplementedError
+
+
+class SdlDisplayer(Displayer):
+	display_map = {}
+
+	def __init__(self, resolution, flags):
+		Displayer.__init__(self)
+		self.screen = pygame.display.set_mode(resolution, flags)
+
+	def display_sprite(self, screen, sprite):
+		res = Displayer.display_sprite(self, screen, sprite)
+		self.screen.blit(*res)
+
+	def display_dialog(self, screen, dialog):
+		# FIXME
+		pass
+
+	def flip(self):
+		pygame.display.flip() #FIXME
+
+	def clean(self):
+		self.screen.fill((0, 0, 0))
+
+	def get_uniform_surface(self, size=None, color=(0, 0, 0), alpha=128):
+		if size is not None:
+			flags = self.screen.get_flags()
+			surface = pygame.Surface(size, flags)
+		else:	surface = self.screen.convert()
+		surface.fill(color)
+		surface.set_alpha(alpha)
+		return surface
+		
+
+SdlDisplayer.display_map.update({ 'sprite' : SdlDisplayer.display_sprite,
+				'dialog' : SdlDisplayer.display_dialog})
+	
+resolution = 800, 600
+flags = pygame.constants.DOUBLEBUF | pygame.constants.HWSURFACE | \
+		pygame.constants.HWACCEL # | pygame.FULLSCREEN  
+default_displayer = SdlDisplayer(resolution, flags)
+
+
+# FIXME : add PygletDisplayer
+
+
+#-------------------------------------------------------------------------------
 class Screen(Object):
+	pass #FIXME : a virer ?
+
+class VirtualScreen(Object):
 	def __init__(self, name='default_screen', geometry=(0, 0, 320, 200),
-				focus=np.array([0, 0]), focus_on=None):
+				focus=np.array([0, 0]), focus_on=None,
+				displayer=default_displayer):
 		'''
     name:       name of the screen
     context:    context of the screen
@@ -619,33 +692,24 @@ class Screen(Object):
     focus:      position in world coordinates on which the screen is focused
                 (center of the screen).
     focus_on:   follow location of the given object (call get_location() func).
-    fps:        number of frames per second (must be < 100)
 		'''
-		if fps > 100: raise RunTimeError("fps number must be < 100.")
 		self._x, self._y, self._width, self._height = geometry
 		self.set_focus(focus)
 		if focus_on is not None:
 			focus_on.attach(self, "location_changed")
 		self.dst_pos = None
+		self._displayer = displayer
 
 	def set_focus(self, focus):
 		self._shift = np.array([self._x + self._width / 2,
 					self._y + self._height / 2]) - focus
 		self._focus = focus
 
-	def display(self, context=default_context):
-		data = context.get_visible_data()
-		for layer, objects in data.items(): # from bg to fg
-			for obj in objects:
-				self.display_object(obj)
-	
-	def display_object(self, obj):
-		time = pygame.time.get_ticks()
-		frame, center = obj.get_frame_infos(time)
-		if frame is None: return
-		dst_pos = self._shift + obj.get_location() - center
-		src_rect = None # pygame.Rect(x, y, w, h) # FIXME
-		Screen.sdl_screen.blit(frame, dst_pos, src_rect)
+	def get_shift(self):
+		return self._shift
+
+	def display(self, obj):
+		self._displayer.display(self, obj)
 
 	def receive_event(self, event):
 		if event.type == 'signal':
@@ -693,10 +757,11 @@ def create_nurse(context):
 	return fsm
 
 def create_dialog(context):
+	screen = default_displayer.screen # FIXME
 	uniform = UniformLayer('dark', context, layer=0,
 				color=(0, 0, 0), alpha=128)
 	uniform.start()
-	w, h = Screen.sdl_screen.get_width(), Screen.sdl_screen.get_height()
+	w, h = screen.get_width(), screen.get_height()
 	w *= 0.8
 	h *= 0.3
 	uniform = UniformLayer('dial1', context, layer=1, size=(w, h),
@@ -707,7 +772,7 @@ def create_dialog(context):
 	uniform = UniformLayer('dial2', context, layer=2, size=(w, h),
 				shift=(0, h + 2), color=(0, 0, 64), alpha=256)
 	uniform.start()
-	w, h = Screen.sdl_screen.get_width(), Screen.sdl_screen.get_height()
+	w, h = screen.get_width(), screen.get_height()
 	w *= 0.8 * 0.98
 	h *= 0.3 * 0.9
 	uniform = UniformLayer('dial3', context, layer=3, size=(w, h),
@@ -739,11 +804,6 @@ def main():
 
 	# WARNING: key event are repeated under NX
 	pygame.key.set_repeat() # prevent key repetition
-	resolution = 800, 600
-	flags = pygame.constants.DOUBLEBUF | pygame.constants.HWSURFACE | \
-		pygame.constants.HWACCEL # | pygame.FULLSCREEN  
-	sdl_screen = pygame.display.set_mode(resolution, flags)
-	Screen.sdl_screen = sdl_screen
 
 	#FIXME : find another way to add the device
 	Object.universe.add_sdl_device(SDL_device())
@@ -786,21 +846,22 @@ def main():
 	create_bg(context_ingame)
 	player = create_player(context_ingame)
 	create_nurse(context_ingame)
-	screen_game = Screen('main screen', geometry,
+	screen_game = VirtualScreen('main screen', geometry,
 		player.get_location(), player)
 	context_ingame.add_screen(screen_game)
 
 	# pause context
 	create_pause(context_pause)
-	screen_fixed = Screen('fixed screen', geometry, (0, 0))
+	screen_fixed = VirtualScreen('fixed screen', geometry, (0, 0))
 	context_pause.add_screen(screen_fixed)
 
 	# dialog context
 	create_dialog(context_dialog)
-	screen_fixed = Screen('fixed screen', geometry, (0, 0))
+	screen_fixed = VirtualScreen('fixed screen', geometry, (0, 0))
 	context_dialog.add_screen(screen_fixed)
 
 	# FPS	
+	fps = 60.
 	font = pygame.font.Font(None, 40)
 	clock = pygame.time.Clock()
 	previous_time = pygame.time.get_ticks()
@@ -815,13 +876,13 @@ def main():
 		context_manager.display()
 		context_manager.update(dt)
 
+		# FIXME : move, deps on SDL + deps on the default_displayer
 		clock.tick()
 		true_fps = clock.get_fps()
 		text = font.render(str(true_fps), True,
 			(255, 255, 255), (0, 0, 0))
-
-		Screen.sdl_screen.blit(text, (0, 0))
-		pygame.display.flip()
+		default_displayer.screen.blit(text, (0, 0)) #FIXME
+		default_displayer.flip()
 
 
 if __name__ == "__main__" : main()
