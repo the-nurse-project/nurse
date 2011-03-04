@@ -3,6 +3,7 @@
 import os, sys, uuid
 import numpy as np
 import pygame
+import pyglet
 
 #-------------------------------------------------------------------------------
 class Object(object):
@@ -37,8 +38,53 @@ class Universe(Object):
 
 
 Object.universe = Universe()
+	
+#-------------------------------------------------------------------------------
+class EventLoop(Object):
+	def __init__(self, fps = 60.):
+		Object.__init__(self)
+		self.fps = fps
 
 
+class SdlEventLoop(EventLoop):
+	def __init__(self, fps = 60.):
+		EventLoop.__init__(self, fps)
+
+	def start(self):
+		previous_time = pygame.time.get_ticks()
+
+		while 1:
+			StateMachine.universe.read_events()
+			time = pygame.time.get_ticks()
+			dt = time - previous_time
+			if dt < (1000. / self.fps): continue
+			previous_time = time
+			self.update(dt)
+
+	def update(self, dt):
+		Object.universe.context_manager.display()
+		Object.universe.context_manager.update(dt)
+
+
+class PygletEventLoop(EventLoop):
+	def __init__(self, fps = 60.):
+		EventLoop.__init__(self, fps)
+
+	def start(self):
+		pass
+		# pyglet.clock.schedule_interval(self.update, 1. / self.fps)
+		# pyglet.app.run()
+
+	def update(self, dt):
+		Object.universe.context_manager.update(dt)
+
+	@classmethod
+	def on_draw(cls):
+		Object.universe.context_manager.display()
+
+
+
+#-------------------------------------------------------------------------------
 class Event(Object):
 	def __init__(self, sender, observers):
 		Object.__init__(self)
@@ -203,14 +249,12 @@ class Text(State):
 		self.writing_machine_mode = writing_machine_mode
 
 
-default_context = Context('default')
-
-
 class StateMachine(State):
 	START = 0
 	STOP = 1
-	def __init__(self, name='state machine', context=default_context):
+	def __init__(self, name='state machine', context=None):
 		State.__init__(self, name)
+		if context is None: context = Config.get_default_context()
 		self._initial_state = None
 		self._possible_states = {}
 		self._current_state = None
@@ -278,12 +322,11 @@ class ContextManager(StateMachine):
 					state.delegate(event)
 
 	def display(self):
-		global default_displayer #FIXME: if several displayer ?
-		default_displayer.clean()
+		Config.get_graphic_backend().clean()
 		for state in self._possible_states.values():
 			if state.is_visible:
 				state.display()
-		default_displayer.flip()
+		Config.get_graphic_backend().flip()
 
 	def update(self, dt):
 		for state in self._possible_states.values():
@@ -292,14 +335,14 @@ class ContextManager(StateMachine):
 
 
 class Sprite(StateMachine):
-	def __init__(self, name='sprite', context=default_context,
-						layer=1, speed=100.):
+	def __init__(self, name='sprite', context=None, layer=1, speed=100.):
 		'''
     name:  name of the sprite
     layer: (default: 1 since 0 is reserved for background)
     speed: speed in world-coordinate metric per seconds
 		'''
 		StateMachine.__init__(self, name, context)
+		if context is None: context = Config.get_default_context()
 		context.add_visible_data(self, layer)
 		self._current_frame_id = 0
 		self._frames = {}
@@ -329,8 +372,9 @@ class Sprite(StateMachine):
 		       of the images.
     fps:             number of frames per seconds.
 		'''
-		self._frames[state] = [default_displayer.load_image(fname) \
-					for fname in frames_fnames]
+		self._frames[state] = [ \
+			Config.get_graphic_backend().load_image(fname) \
+			for fname in frames_fnames]
 		self._refresh_delay[state] = int(1000 / fps)
 		loc = []
 		if isinstance(center_location, str):
@@ -386,12 +430,13 @@ class Sprite(StateMachine):
 class MovingSprite(Sprite):
 	Start_to_End = 0
 	End_to_Start = 1
-	def __init__(self, name='moving sprite', context=default_context,
-						layer=2, speed=100.):
+	def __init__(self, name='moving sprite', context=None,
+					layer=2, speed=100.):
 		'''
     path : list of world coordinates
 		'''
 		Sprite.__init__(self, name, context, layer, speed)
+		if context is None: context = Config.get_default_context()
 		self._path = None
 		self._way = MovingSprite.Start_to_End
 		self._indice_states = [\
@@ -469,9 +514,10 @@ class MovingSprite(Sprite):
 
 
 class Player(Sprite):
-	def __init__(self, name='sprite', context=default_context,
-						layer=2, speed=100.):
+	def __init__(self, name='sprite', context=None,
+				layer=2, speed=100.):
 		Sprite.__init__(self, name, context, layer, speed)
+		if context is None: context = Config.get_default_context()
 		states = [State("rest"), State("left"), State("left-up"),
 			State("up"), State("right-up"),
 			State("right"), State("right-down"),
@@ -550,8 +596,8 @@ class UniformLayer(Sprite):
 	def __init__(self, name, context, layer=2, size=None,
 			shift=(0, 0), color=(0, 0, 0), alpha=128):
 		Sprite.__init__(self, name, context, layer)
-		self._surface = default_displayer.get_uniform_surface(size,
-								color, alpha)
+		gfx = Config.get_graphic_backend()
+		self._surface = gfx.get_uniform_surface(size, color, alpha)
 		Sprite.set_location(self, np.array(shift))
 		self._center = np.array(self._surface.get_size()) /2.
 	
@@ -572,9 +618,10 @@ class Dialog(StateMachine):
 
 
 class FpsSprite(StateMachine):
-	def __init__(self, name='fps', context=default_context, layer=3,
+	def __init__(self, name='fps', context=None, layer=3,
 		fg_color=(255, 255, 255), bg_color=(0, 0, 0)):
 		StateMachine.__init__(self, name, context)
+		if context is None: context = Config.get_default_context()
 		self.fg_color = fg_color
 		self.bg_color = bg_color
 		context.add_visible_data(self, layer)
@@ -582,6 +629,7 @@ class FpsSprite(StateMachine):
 	def update(self, dt):
 		pass
 
+pygame.init() # FIXME
 #-------------------------------------------------------------------------------
 class SDL_device(State):
 	def __init__(self):
@@ -626,18 +674,38 @@ class SdlImageProxy(ImageProxy):
 	def get_size(self):
 		return self._raw_image.get_size()
 
+	def get_width(self):
+		return self._raw_image.get_size()[0]
+
+	def get_height(self):
+		return self._raw_image.get_size()[1]
+
 
 class PygletImageProxy(ImageProxy):
 	def __init__(self, raw_image):
 		ImageProxy.__init__(self, raw_image)
 
 	def get_size(self):
-		return self._raw_image.get_size()
+		if self._raw_image is None: return 0, 0 #FIXME
+		return self._raw_image.width, self._raw_image.height
 
+	def get_width(self):
+		return self._raw_image.width
+
+	def get_height(self):
+		return self._raw_image.height
 
 
 #-------------------------------------------------------------------------------
-class Displayer(object):
+class GraphicBackend(object):
+	# GraphicBackend and derivated classes are singletons
+	instances = {}
+
+	def __new__(cls, *args, **kwargs):
+		if GraphicBackend.instances.get(cls) is None:
+			GraphicBackend.instances[cls] = object.__new__(cls)
+		return GraphicBackend.instances[cls]
+
 	def display(self, screen, obj):
 		if isinstance(obj, Sprite):
 			type = 'sprite'
@@ -667,20 +735,21 @@ class Displayer(object):
 		raise NotImplementedError
 
 
-class SdlDisplayer(Displayer):
+class SdlGraphicBackend(GraphicBackend):
 	display_map = {}
 
 	def __init__(self, resolution, flags):
-		Displayer.__init__(self)
+		GraphicBackend.__init__(self)
 		pygame.init()
 		pygame.font.init()
-		self.screen = pygame.display.set_mode(resolution, flags)
+		self._screen = pygame.display.set_mode(resolution, flags)
 		self._clock = pygame.time.Clock()
 		self._font = pygame.font.Font(None, 40)
+		self._img_path = 'pix'
 
 	def display_sprite(self, screen, sprite):
-		res = Displayer.display_sprite(self, screen, sprite)
-		self.screen.blit(*res)
+		res = GraphicBackend.display_sprite(self, screen, sprite)
+		self._screen.blit(*res)
 
 	def display_dialog(self, screen, dialog):
 		# FIXME
@@ -691,49 +760,54 @@ class SdlDisplayer(Displayer):
 		true_fps = self._clock.get_fps()
 		text = self._font.render(str(true_fps), True,
 			fps.fg_color, fps.bg_color)
-		self.screen.blit(text, (0, 0)) #FIXME
+		self._screen.blit(text, (0, 0)) #FIXME
 
 	def flip(self):
 		pygame.display.flip() #FIXME
 
 	def clean(self):
-		self.screen.fill((0, 0, 0))
+		self._screen.fill((0, 0, 0))
 
 	def get_uniform_surface(self, size=None, color=(0, 0, 0), alpha=128):
 		if size is not None:
-			flags = self.screen.get_flags()
+			flags = self._screen.get_flags()
 			surface = pygame.Surface(size, flags)
-		else:	surface = self.screen.convert()
+		else:	surface = self._screen.convert()
 		surface.fill(color)
 		surface.set_alpha(alpha)
 		return SdlImageProxy(surface)
 
 	def load_image(self, filename):
-		surface = pygame.image.load(filename)
+		surface = pygame.image.load(os.path.join(self._img_path,
+							filename))
 		alpha_color = (0xff, 0, 0xff)
 		flags = pygame.constants.SRCCOLORKEY | pygame.constants.RLEACCEL
 		surface.set_colorkey(alpha_color, flags)
 		return SdlImageProxy(surface)
-		
 
-SdlDisplayer.display_map.update({ 'sprite' : SdlDisplayer.display_sprite,
-				'dialog' : SdlDisplayer.display_dialog,
-				'fps' : SdlDisplayer.display_fps})
+	def get_screen(self):
+		return SdlImageProxy(self._screen)
+	
+
+SdlGraphicBackend.display_map.update({ \
+	'sprite' : SdlGraphicBackend.display_sprite,
+	'dialog' : SdlGraphicBackend.display_dialog,
+	'fps' : SdlGraphicBackend.display_fps})
 
 
-class PygletDisplayer(Displayer):
+class PygletGraphicBackend(GraphicBackend):
 	display_map = {}
-
+	
 	def __init__(self, resolution, caption):
-		Displayer.__init__(self)
-		pyglet.resource.path.append('pix/')
+		GraphicBackend.__init__(self)
+		pyglet.resource.path.append('pix')
 		pyglet.resource.reindex()
-		self._win = pyglet.window.Window(resolution[0], resolution[1],
+		self._win = pyglet.window.Window(resolution[0],resolution[1],
 							caption=caption)
 		self._fps_display = pyglet.clock.ClockDisplay()
 
 	def display_sprite(self, screen, sprite):
-		raw_img, dst_pos, src_rect = Displayer.display_sprite(self,
+		raw_img, dst_pos, src_rect = GraphicBackend.display_sprite(self,
 							screen, sprite)
 		raw_img.blit(*dst_pos)
 		# FIXME use src_rect
@@ -758,24 +832,20 @@ class PygletDisplayer(Displayer):
 		img = pyglet.resource.image(filename)
 		return PygletImageProxy(img)
 
-PygletDisplayer.display_map.update({ 'sprite' : PygletDisplayer.display_sprite,
-				'dialog' : PygletDisplayer.display_dialog,
-				'fps' : PygletDisplayer.display_fps})
-
-
+	def get_screen(self):
+		return SdlImageProxy(self._win)
 	
-resolution = 800, 600
-flags = pygame.constants.DOUBLEBUF | pygame.constants.HWSURFACE | \
-		pygame.constants.HWACCEL # | pygame.FULLSCREEN  
-default_displayer = SdlDisplayer(resolution, flags)
 
+PygletGraphicBackend.display_map.update({ \
+	'sprite' : PygletGraphicBackend.display_sprite,
+	'dialog' : PygletGraphicBackend.display_dialog,
+	'fps' : PygletGraphicBackend.display_fps})
 
 
 #-------------------------------------------------------------------------------
 class VirtualScreen(Object):
 	def __init__(self, name='default_screen', geometry=(0, 0, 320, 200),
-				focus=np.array([0, 0]), focus_on=None,
-				displayer=default_displayer):
+				focus=np.array([0, 0]), focus_on=None):
 		'''
     name:       name of the screen
     context:    context of the screen
@@ -793,7 +863,6 @@ class VirtualScreen(Object):
 		if focus_on is not None:
 			focus_on.attach(self, "location_changed")
 		self.dst_pos = None
-		self._displayer = displayer
 
 	def set_focus(self, focus):
 		self._shift = np.array([self._x + self._width / 2,
@@ -804,7 +873,7 @@ class VirtualScreen(Object):
 		return self._shift
 
 	def display(self, obj):
-		self._displayer.display(self, obj)
+		Config.get_graphic_backend().display(self, obj)
 
 	def receive_event(self, event):
 		if event.type == 'signal':
@@ -813,15 +882,71 @@ class VirtualScreen(Object):
 
 
 #-------------------------------------------------------------------------------
+class Config(object):
+	# config data values
+	graphic_backend = 'sdl'
+	event_loop_backend = 'sdl'
+	resolution = 800, 600
+	caption = 'nurse game engine'
+	sdl_flags = pygame.constants.DOUBLEBUF | pygame.constants.HWSURFACE | \
+				pygame.constants.HWACCEL # | pygame.FULLSCREEN  
+	fps = 60
+
+	# internal data
+	default_context = Context('default')
+	graphic_backend_map = {\
+		'sdl' : (SdlGraphicBackend, (resolution, sdl_flags)),
+		'pyglet' : (PygletGraphicBackend, (resolution, caption))}
+	event_loop_backend_map = {'sdl' : SdlEventLoop,
+				'pyglet' : PygletEventLoop}
+	graphic_backend_instance =  None
+	event_loop_backend_instance = None
+	# FIXME : add devices (keyboard, mouse) backend
+
+	@classmethod
+	def init(cls):
+		# instanciate backends
+		Config.get_graphic_backend()
+		Config.get_event_loop_backend()
+
+	@classmethod
+	def read_config_file(cls):
+		pass # FIXME : read from file (configobj ?)
+
+	@classmethod
+	def get_default_context(cls):
+		return Config.default_context
+
+	@classmethod
+	def get_graphic_backend(cls):
+		if cls.graphic_backend_instance is None:
+			c, args = cls.graphic_backend_map[cls.graphic_backend]
+			cls.graphic_backend_instance = c(*args)
+		return cls.graphic_backend_instance
+
+	@classmethod
+	def get_event_loop_backend(cls):
+		if cls.event_loop_backend_instance is None:
+			c = cls.event_loop_backend_map[cls.event_loop_backend]
+			cls.event_loop_backend_instance = c(Config.fps)
+			if cls.event_loop_backend == 'pyglet':
+				gfx = cls.get_graphic_backend()
+				win = gfx.get_screen().get_raw_image()
+				instance = cls.event_loop_backend_instance
+				instance.on_draw = win.event(instance.on_draw)
+		return cls.event_loop_backend_instance
+
+
+#-------------------------------------------------------------------------------
 def create_bg(context):
 	fsm = StaticSprite('hospital', context, layer=0,
-				imgname='pix/hopital.png')
+				imgname='hopital.png')
 	fsm.set_location(np.array([-100, -100]))
 	fsm.start()
 
 def create_pause(context):
 	fsm = StaticSprite('pause', context, layer=2,
-				imgname='pix/pause.png')
+				imgname='pause.png')
 	fsm.set_location(np.array([0, 0]))
 	fsm.start()
 	uniform = UniformLayer('dark', context, layer=0,
@@ -831,7 +956,7 @@ def create_pause(context):
 
 def create_player(context):
 	fsm = Player("player", context, layer=2, speed=120.)
-	fsm.load_frames_from_filenames('__default__', ['pix/perso.png'],
+	fsm.load_frames_from_filenames('__default__', ['perso.png'],
 						'centered_bottom', 1)
 	fsm.set_location(np.array([-260, -140]))
 	fsm.start()
@@ -845,14 +970,14 @@ def create_nurse(context):
 	p5 = [200, 50]
 	path = np.array([p1, p2, p3, p4, p5, p3, p2])
 	fsm = MovingSprite("nurse", context, layer=2, speed=180.)
-	fsm.load_frames_from_filenames('__default__', ['pix/infirmiere.png'],
+	fsm.load_frames_from_filenames('__default__', ['infirmiere.png'],
 							'centered_bottom', 1)
 	fsm.set_path(path)
 	fsm.start()
 	return fsm
 
 def create_dialog(context):
-	screen = default_displayer.screen # FIXME
+	screen = Config.get_graphic_backend().get_screen() # FIXME
 	uniform = UniformLayer('dark', context, layer=0,
 				color=(0, 0, 0), alpha=128)
 	uniform.start()
@@ -889,14 +1014,14 @@ def create_dialog(context):
 		dialog.add_state(state)
 	dialog.start()
 	sprite = StaticSprite('sprite', context, layer=4,
-				imgname='pix/perso.png')
+				imgname='perso.png')
 	sprite.set_location(np.array([-270, 180]))
 	sprite.start()
 
 #-------------------------------------------------------------------------------
 def main():
-	# WARNING: key event are repeated under NX
-	pygame.key.set_repeat() # prevent key repetition
+	Config.graphic_backend = Config.event_loop_backend = 'pyglet'
+	Config.init()
 
 	#FIXME : find another way to add the device
 	Object.universe.add_sdl_device(SDL_device())
@@ -935,6 +1060,7 @@ def main():
 	event = SignalEvent(None, [context_manager], signal_dialog_on)
 	#event.start()
 
+	resolution = Config.resolution
 	geometry = (0, 0, resolution[0], resolution[1])
 
 	# ingame context
@@ -959,19 +1085,11 @@ def main():
 	context_fps.add_screen(screen_fixed)
 
 	# FPS
-	fps = 60.
-	previous_time = pygame.time.get_ticks()
-
-	# event loop
-	while 1:
-		StateMachine.universe.read_events()
-		time = pygame.time.get_ticks()
-		dt = time - previous_time
-		if dt < (1000. / fps): continue
-		previous_time = time
-		context_manager.display()
-		context_manager.update(dt)
-
+	event_loop = Config.get_event_loop_backend()
+	print event_loop
+	event_loop.start()
+	pyglet.clock.schedule_interval(event_loop.update, 1. / 60.)
+	pyglet.app.run()
 
 if __name__ == "__main__" : main()
 #-------------------------------------------------------------------------------
