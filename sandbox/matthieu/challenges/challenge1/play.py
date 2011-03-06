@@ -938,22 +938,26 @@ class PygletGraphicBackend(GraphicBackend):
 
 class PygletUniformSurface(object):
 	def __init__(self, shift, size, color, alpha):
-		x1, y1 = int(shift[0]), int(shift[1])
+		self._x, self._y = int(shift[0]), int(shift[1])
 		self.width = int(size[0])
 		self.height = int(size[1])
 		x2, y2 = self.width, self.height
 		self._batch = pyglet.graphics.Batch()
 		self._batch.add(4, pyglet.gl.GL_QUADS, None,
-			('v2i', [x1, y1, x2, y1, x2, y2, x1, y2]),
+			('v2i', [0, 0, x2, 0, x2, y2, 0, y2]),
 			('c4B', (list(color) + [int(alpha)]) * 4))
 
 	def set_position(self, x, y):
-		pass
+		self._x = x
+		self._y = y
 
 	def draw(self):
+		glPushMatrix()
+		glTranslatef(self._x, self._y, 0)
 		glEnable(GL_BLEND)
 		self._batch.draw()
 		glDisable(GL_BLEND)
+		glPopMatrix()
 
 
 PygletGraphicBackend.display_map.update({ \
@@ -1120,18 +1124,18 @@ def create_dialog(context):
 	w *= 0.8
 	h *= 0.3
 	uniform = UniformLayer('dial1', context, layer=1, size=(w, h),
-				shift=(0, h), color=(255, 255, 255), alpha=256)
+				shift=(0, h), color=(255, 255, 255), alpha=255)
 	uniform.start()
 	w -= 2
 	h -= 2
 	uniform = UniformLayer('dial2', context, layer=2, size=(w, h),
-				shift=(0, h + 2), color=(0, 0, 64), alpha=256)
+				shift=(0, h + 2), color=(0, 0, 64), alpha=255)
 	uniform.start()
 	w, h = screen.get_width(), screen.get_height()
 	w *= 0.8 * 0.98
 	h *= 0.3 * 0.9
 	uniform = UniformLayer('dial3', context, layer=3, size=(w, h),
-			shift=(0, h * 1.12), color=(0, 0, 128), alpha=256)
+			shift=(0, h * 1.12), color=(0, 0, 128), alpha=255)
 	uniform.start()
 	dialog = Dialog('dialog', context, layer=1)
 	msg = [
@@ -1194,7 +1198,7 @@ def main():
 	context_manager.start()
 
 	event = SignalEvent(None, [context_manager], signal_dialog_on)
-	#event.start()
+	event.start()
 
 	resolution = Config.resolution
 	geometry = (0, 0, resolution[0], resolution[1])
