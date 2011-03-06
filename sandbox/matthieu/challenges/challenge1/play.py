@@ -1,113 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: iso-8859-15 -*-
 import os, sys, uuid
+import enum
 import numpy as np
 import pygame
 import pyglet
+from pyglet.gl import *
 
 #-------------------------------------------------------------------------------
 class Object(object):
 	def set_property(self, name, value):
 		self.__setattr__(name, value)
-
-
-class Universe(Object):
-	def __init__(self):
-		Object.__init__(self)
-		self._pending_events = []
-
-	def add_sdl_device(self, sdl_device):
-		self.sdl_device = sdl_device
-
-	def add_event(self, event):
-		self._pending_events.append(event)
-
-	def get_events(self):
-		try:
-			yield self._pending_events.pop()
-		except IndexError: pass
-
-	def read_events(self):
-		if len(self._pending_events) != 0:
-			e = self._pending_events.pop()
-			e.start()
-		self.sdl_device.read_events()
-
-	def receive_event(self, event):
-		pass
-
-
-Object.universe = Universe()
-	
-#-------------------------------------------------------------------------------
-class EventLoop(Object):
-	def __init__(self, fps = 60.):
-		Object.__init__(self)
-		self.fps = fps
-
-
-class SdlEventLoop(EventLoop):
-	def __init__(self, fps = 60.):
-		EventLoop.__init__(self, fps)
-
-	def start(self):
-		previous_time = pygame.time.get_ticks()
-
-		while 1:
-			StateMachine.universe.read_events()
-			time = pygame.time.get_ticks()
-			dt = time - previous_time
-			if dt < (1000. / self.fps): continue
-			previous_time = time
-			self.update(dt)
-
-	def update(self, dt):
-		Object.universe.context_manager.display()
-		Object.universe.context_manager.update(dt)
-
-
-class PygletEventLoop(EventLoop):
-	def __init__(self, fps = 60.):
-		EventLoop.__init__(self, fps)
-
-	def start(self):
-		pass
-		# pyglet.clock.schedule_interval(self.update, 1. / self.fps)
-		# pyglet.app.run()
-
-	def update(self, dt):
-		Object.universe.context_manager.update(dt)
-
-	@classmethod
-	def on_draw(cls):
-		Object.universe.context_manager.display()
-
-
-
-#-------------------------------------------------------------------------------
-class Event(Object):
-	def __init__(self, sender, observers):
-		Object.__init__(self)
-		self.sender = sender
-		self.observers = observers
-
-	def start(self):
-		for observer in self.observers:
-			observer.receive_event(self)
-
-
-class SignalEvent(Event):
-	def __init__(self, sender, observers, signal, signal_data=None):
-		Event.__init__(self, sender, observers)
-		self.signal = signal
-		self.signal_data = signal_data
-		self.type = 'signal'
-
-
-class UpdateEvent(Event):
-	def __init__(self, sender, observers):
-		Event.__init__(self, sender, observers)
-		self.type = 'update'
 
 
 class Observable(Object):
@@ -143,15 +46,16 @@ class Observable(Object):
 		observers += self._observers['__all__']
 		if len(observers) == 0: return
 		if asynchronous:
+			event_loop = Config.get_event_loop_backend()
 			if batch is True:
 				event = SignalEvent(self, observers,
 						signal, signal_data)
-				Object.universe.add_event(event)
+				event_loop.add_event(event)
 			else:
 				for observer in observers:
 					event = SignalEvent(self, [observer],
 							signal, signal_data)
-					Object.universe.add_event(event)
+					event_loop.add_event(event)
 		else:
 			# for synchronoous events : data are batched
 			event = SignalEvent(self, observers,
@@ -159,6 +63,207 @@ class Observable(Object):
 			event.start()
 
 
+class Universe(Object):
+	def __init__(self):
+		Object.__init__(self)
+
+Object.universe = Universe()
+	
+#-------------------------------------------------------------------------------
+class EventLoop(Object):
+	def __init__(self, fps = 60.):
+		Object.__init__(self)
+		self.fps = fps
+		self._pending_events = []
+
+	def add_event(self, event):
+		self._pending_events.append(event)
+
+	def get_events(self):
+		try:
+			yield self._pending_events.pop()
+		except IndexError: pass
+
+
+class SdlEventLoop(EventLoop):
+	def __init__(self, fps = 60.):
+		EventLoop.__init__(self, fps)
+
+	def start(self):
+		previous_time = pygame.time.get_ticks()
+
+		while 1:
+			self.read_events()
+			time = pygame.time.get_ticks()
+			dt = time - previous_time
+			if dt < (1000. / self.fps): continue
+			previous_time = time
+			self.update(dt)
+
+	def update(self, dt):
+		Object.universe.context_manager.display()
+		Object.universe.context_manager.update(dt)
+
+	def read_events(self):
+		if len(self._pending_events) != 0:
+			e = self._pending_events.pop()
+			e.start()
+		Config.get_keyboard_backend().read_events()
+
+
+class PygletEventLoop(EventLoop):
+	def __init__(self, fps = 60.):
+		EventLoop.__init__(self, fps)
+
+	def start(self):
+		pyglet.clock.schedule_interval(self.update, 1. / self.fps)
+		pyglet.app.run()
+
+	def update(self, dt):
+		'''
+    dt : delay in seconds between 2 calls of this method
+                '''
+		self.read_events()
+		Object.universe.context_manager.update(dt * 1000.)
+
+	@classmethod
+	def on_draw(cls):
+		Object.universe.context_manager.display()
+
+	def read_events(self):
+		if len(self._pending_events) != 0:
+			e = self._pending_events.pop()
+			e.start()
+
+#-------------------------------------------------------------------------------
+class KeyBoardDevice(Observable):
+	constants = enum.Enum(*(['KEYDOWN', 'KEYUP'] + \
+		['K_' + chr(i) for i in range(ord('a'), ord('z') + 1)] + \
+		['K_' + str(i) for i in range(10)] + \
+		['K_UP', 'K_DOWN', 'K_LEFT', 'K_RIGHT', 'K_ESCAPE'] + \
+		['UNKNOWN']))
+
+	def __init__(self):
+		Observable.__init__(self)
+
+	@classmethod
+	def _get_key_from_symbol(cls, symbol):
+		try:
+			return cls.keysym_map[symbol]
+		except:
+			print "warning: symbol '%d' is not handle" % symbol
+			return cls.constants.UNKNOWN
+
+
+class SdlKeyBoardDevice(KeyBoardDevice):
+	keysym_map = {}
+	for i in range(ord('a'), ord('z') + 1):
+		key = 'K_' + chr(i)
+		keysym_map[pygame.constants.__getattribute__(key)] = \
+			KeyBoardDevice.constants.__getattribute__(key)
+	for i in range(10):
+		key = 'K_' + str(i)
+		keysym_map[pygame.constants.__getattribute__(key)] = \
+			KeyBoardDevice.constants.__getattribute__(key)
+	for key in ['K_UP', 'K_DOWN', 'K_LEFT', 'K_RIGHT', 'K_ESCAPE',
+		'KEYDOWN', 'KEYUP']:
+		keysym_map[pygame.constants.__getattribute__(key)] = \
+			KeyBoardDevice.constants.__getattribute__(key)
+	
+	def __init__(self):
+		KeyBoardDevice.__init__(self)
+
+	def read_events(self):
+		event = pygame.event.poll()
+		if (event.type == 0): return
+		keystate = pygame.key.get_pressed()
+		if (event.type == pygame.constants.QUIT): sys.exit(0)
+		if (event.type == pygame.constants.KEYDOWN):
+			keymap = pygame.key.get_pressed()
+			if keymap[pygame.constants.K_q] or \
+				keymap[pygame.constants.K_ESCAPE]:
+				sys.exit(0)
+			elif keymap[pygame.constants.K_f]:
+				pygame.display.toggle_fullscreen()
+		# filter some events
+		if event.type not in [pygame.constants.KEYDOWN,\
+				pygame.constants.KEYUP]: return
+		else:
+			type = self._get_key_from_symbol(event.type)
+			key = self._get_key_from_symbol(event.key)
+			self.notify((type, key),True, False)
+
+
+class PygletKeyBoardDevice(KeyBoardDevice):
+	fullscreen = False
+	keysym_map = {}
+	for i in range(ord('a'), ord('z') + 1):
+		key = chr(i)
+		keysym_map[pyglet.window.key.__getattribute__(key.upper())] = \
+			KeyBoardDevice.constants.__getattribute__('K_' + key)
+	for i in range(10):
+		key = str(i)
+		keysym_map[pyglet.window.key.__getattribute__('NUM_' + key)] = \
+			KeyBoardDevice.constants.__getattribute__('K_' + key)
+	for key in ['UP', 'DOWN', 'LEFT', 'RIGHT', 'ESCAPE']:
+		keysym_map[pyglet.window.key.__getattribute__(key)] = \
+			KeyBoardDevice.constants.__getattribute__('K_' + key)
+
+	def __init__(self):
+		KeyBoardDevice.__init__(self)
+		self._win = None
+
+	def attach_window(self, win):
+		self._win = win
+		self.on_key_press = win.event(self.on_key_press)
+		self.on_key_release = win.event(self.on_key_release)
+
+	def on_key_press(self, symbol, modifiers):
+		if symbol == pyglet.window.key.ESCAPE or \
+			symbol == pyglet.window.key.Q:
+			sys.exit()
+		elif symbol == pyglet.window.key.F:
+			self._win.set_fullscreen(self.fullscreen)
+			self.fullscreen = not self.fullscreen
+		
+		key = self._get_key_from_symbol(symbol)
+		self.notify((KeyBoardDevice.constants.KEYDOWN, key),True, False)
+		return pyglet.event.EVENT_HANDLED
+
+	def on_key_release(self, symbol, modifiers):
+		key = self._get_key_from_symbol(symbol)
+		self.notify((KeyBoardDevice.constants.KEYUP, key),True, False)
+
+		return pyglet.event.EVENT_HANDLED
+
+
+#-------------------------------------------------------------------------------
+class Event(Object):
+	def __init__(self, sender, observers):
+		Object.__init__(self)
+		self.sender = sender
+		self.observers = observers
+
+	def start(self):
+		for observer in self.observers:
+			observer.receive_event(self)
+
+
+class SignalEvent(Event):
+	def __init__(self, sender, observers, signal, signal_data=None):
+		Event.__init__(self, sender, observers)
+		self.signal = signal
+		self.signal_data = signal_data
+		self.type = 'signal'
+
+
+class UpdateEvent(Event):
+	def __init__(self, sender, observers):
+		Event.__init__(self, sender, observers)
+		self.type = 'update'
+
+
+#-------------------------------------------------------------------------------
 class State(Observable):
 	def __init__(self, name):
 		Observable.__init__(self)
@@ -309,7 +414,7 @@ class StateMachine(State):
 class ContextManager(StateMachine):
 	def __init__(self):
 		StateMachine.__init__(self, 'Context Manager')
-		StateMachine.universe.sdl_device.attach(self, '__all__')
+		Config.get_keyboard_backend().attach(self, '__all__')
 
 	def receive_event(self, event):
 		# - try to modify the current context
@@ -526,27 +631,35 @@ class Player(Sprite):
 		self.set_initial_state(states[0])
 
 		# left
-		signal = (pygame.constants.KEYDOWN, pygame.constants.K_LEFT)
+		signal = (KeyBoardDevice.constants.KEYDOWN,
+				KeyBoardDevice.constants.K_LEFT)
 		states[0].add_transition(context, signal, states[1])
-		signal = (pygame.constants.KEYUP, pygame.constants.K_LEFT)
+		signal = (KeyBoardDevice.constants.KEYUP,
+				KeyBoardDevice.constants.K_LEFT)
 		states[1].add_transition(context, signal, states[0])
 
 		# up
-		signal = (pygame.constants.KEYDOWN, pygame.constants.K_UP)
+		signal = (KeyBoardDevice.constants.KEYDOWN,
+				KeyBoardDevice.constants.K_UP)
 		states[0].add_transition(context, signal, states[3])
-		signal = (pygame.constants.KEYUP, pygame.constants.K_UP)
+		signal = (KeyBoardDevice.constants.KEYUP,
+				KeyBoardDevice.constants.K_UP)
 		states[3].add_transition(context, signal, states[0])
 
 		# right
-		signal = (pygame.constants.KEYDOWN, pygame.constants.K_RIGHT)
+		signal = (KeyBoardDevice.constants.KEYDOWN,
+				KeyBoardDevice.constants.K_RIGHT)
 		states[0].add_transition(context, signal, states[5])
-		signal = (pygame.constants.KEYUP, pygame.constants.K_RIGHT)
+		signal = (KeyBoardDevice.constants.KEYUP,
+				KeyBoardDevice.constants.K_RIGHT)
 		states[5].add_transition(context, signal, states[0])
 
 		# down
-		signal = (pygame.constants.KEYDOWN, pygame.constants.K_DOWN)
+		signal = (KeyBoardDevice.constants.KEYDOWN,
+				KeyBoardDevice.constants.K_DOWN)
 		states[0].add_transition(context, signal, states[7])
-		signal = (pygame.constants.KEYUP, pygame.constants.K_DOWN)
+		signal = (KeyBoardDevice.constants.KEYUP,
+				KeyBoardDevice.constants.K_DOWN)
 		states[7].add_transition(context, signal, states[0])
 
 		# FIXME : add diagonal
@@ -597,7 +710,8 @@ class UniformLayer(Sprite):
 			shift=(0, 0), color=(0, 0, 0), alpha=128):
 		Sprite.__init__(self, name, context, layer)
 		gfx = Config.get_graphic_backend()
-		self._surface = gfx.get_uniform_surface(size, color, alpha)
+		self._surface = gfx.get_uniform_surface(shift, size,
+							color, alpha)
 		Sprite.set_location(self, np.array(shift))
 		self._center = np.array(self._surface.get_size()) /2.
 	
@@ -617,47 +731,18 @@ class Dialog(StateMachine):
 		context.add_visible_data(self, layer)
 
 
-class FpsSprite(StateMachine):
+class FpsSprite(Sprite):
 	def __init__(self, name='fps', context=None, layer=3,
 		fg_color=(255, 255, 255), bg_color=(0, 0, 0)):
-		StateMachine.__init__(self, name, context)
+		Sprite.__init__(self, name, context, layer)
 		if context is None: context = Config.get_default_context()
 		self.fg_color = fg_color
 		self.bg_color = bg_color
-		context.add_visible_data(self, layer)
 
 	def update(self, dt):
 		pass
 
 pygame.init() # FIXME
-#-------------------------------------------------------------------------------
-class SDL_device(State):
-	def __init__(self):
-		State.__init__(self, "SDL device")
-
-	def read_events(self):
-		# FIXME : remove specific key handling
-		# FIXME : handle diagonal sprite displacement: LEFT + UP, ...
-		# for event in pygame.event.get():
-		#if 1:
-			event = pygame.event.poll()
-			if (event.type == 0): return
-			keystate = pygame.key.get_pressed()
-			if (event.type == pygame.constants.QUIT): sys.exit(0)
-			if (event.type == pygame.constants.KEYDOWN):
-				keymap = pygame.key.get_pressed()
-				if keymap[pygame.constants.K_q] or \
-					keymap[pygame.constants.K_ESCAPE]:
-					sys.exit(0)
-				elif keymap[pygame.constants.K_f]:
-					pygame.display.toggle_fullscreen()
-			# filter some events
-			if event.type not in [pygame.constants.KEYDOWN,\
-					pygame.constants.KEYUP]: return #continue
-			else:	self.notify((event.type, event.key),True, False)
-			# print event
-
-
 #-------------------------------------------------------------------------------
 class ImageProxy(object):
 	def __init__(self, raw_image):
@@ -707,12 +792,12 @@ class GraphicBackend(object):
 		return GraphicBackend.instances[cls]
 
 	def display(self, screen, obj):
-		if isinstance(obj, Sprite):
+		if isinstance(obj, FpsSprite):
+			type = 'fps'
+		elif isinstance(obj, Sprite):
 			type = 'sprite'
 		elif isinstance(obj, Dialog):
 			type = 'dialog'
-		elif isinstance(obj, FpsSprite):
-			type = 'fps'
 		else:	type = None
 		self.display_map[type](self, screen, obj)
 
@@ -731,7 +816,8 @@ class GraphicBackend(object):
 	def clean(self):
 		raise NotImplementedError
 
-	def get_uniform_surface(self, size=None, color=(0, 0, 0), alpha=128):
+	def get_uniform_surface(self, shift=(0, 0), size=None,
+				color=(0, 0, 0), alpha=128):
 		raise NotImplementedError
 
 
@@ -760,7 +846,7 @@ class SdlGraphicBackend(GraphicBackend):
 		true_fps = self._clock.get_fps()
 		text = self._font.render(str(true_fps), True,
 			fps.fg_color, fps.bg_color)
-		self._screen.blit(text, (0, 0)) #FIXME
+		self._screen.blit(text, fps.get_location()) #FIXME
 
 	def flip(self):
 		pygame.display.flip() #FIXME
@@ -768,7 +854,8 @@ class SdlGraphicBackend(GraphicBackend):
 	def clean(self):
 		self._screen.fill((0, 0, 0))
 
-	def get_uniform_surface(self, size=None, color=(0, 0, 0), alpha=128):
+	def get_uniform_surface(self, shift=(0, 0), size=None,
+				color=(0, 0, 0), alpha=128):
 		if size is not None:
 			flags = self._screen.get_flags()
 			surface = pygame.Surface(size, flags)
@@ -800,22 +887,32 @@ class PygletGraphicBackend(GraphicBackend):
 	
 	def __init__(self, resolution, caption):
 		GraphicBackend.__init__(self)
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 		pyglet.resource.path.append('pix')
 		pyglet.resource.reindex()
-		self._win = pyglet.window.Window(resolution[0],resolution[1],
+		self._win = pyglet.window.Window(resolution[0], resolution[1],
 							caption=caption)
 		self._fps_display = pyglet.clock.ClockDisplay()
 
+	def _invert_y_axis(self, img, pos_y):
+		return self._win.height - pos_y - img.height
+
 	def display_sprite(self, screen, sprite):
-		raw_img, dst_pos, src_rect = GraphicBackend.display_sprite(self,
+		sprite, dst_pos, src_rect = GraphicBackend.display_sprite(self,
 							screen, sprite)
-		raw_img.blit(*dst_pos)
+		dst_pos[1] = self._invert_y_axis(sprite, dst_pos[1])
+		sprite.set_position(*dst_pos)
+		sprite.draw()
 		# FIXME use src_rect
 
 	def display_dialog(self, screen, dialog):
 		pass # FIXME
 
 	def display_fps(self, screen, fps):
+		pos = list(fps.get_location())
+		pos[1] = self._invert_y_axis(self._fps_display.label, pos[1])
+		self._fps_display.label.x = pos[0]
+		self._fps_display.label.y = pos[1]
 		self._fps_display.draw()
 
 	def flip(self):
@@ -824,17 +921,40 @@ class PygletGraphicBackend(GraphicBackend):
 	def clean(self):
 		self._win.clear()
 
-	def get_uniform_surface(self, size=None, color=(0, 0, 0), alpha=128):
-		surface = None # FIXME
+	def get_uniform_surface(self, shift=(0, 0), size=None,
+				color=(0, 0, 0), alpha=128):
+		if size is None: size = self._win.width, self._win.height
+		surface = PygletUniformSurface(shift, size, color, alpha)
 		return PygletImageProxy(surface)
 
 	def load_image(self, filename):
 		img = pyglet.resource.image(filename)
-		return PygletImageProxy(img)
+		sprite = pyglet.sprite.Sprite(img, 0, 0)
+		return PygletImageProxy(sprite)
 
 	def get_screen(self):
 		return SdlImageProxy(self._win)
 	
+
+class PygletUniformSurface(object):
+	def __init__(self, shift, size, color, alpha):
+		x1, y1 = int(shift[0]), int(shift[1])
+		self.width = int(size[0])
+		self.height = int(size[1])
+		x2, y2 = self.width, self.height
+		self._batch = pyglet.graphics.Batch()
+		self._batch.add(4, pyglet.gl.GL_QUADS, None,
+			('v2i', [x1, y1, x2, y1, x2, y2, x1, y2]),
+			('c4B', (list(color) + [int(alpha)]) * 4))
+
+	def set_position(self, x, y):
+		pass
+
+	def draw(self):
+		glEnable(GL_BLEND)
+		self._batch.draw()
+		glDisable(GL_BLEND)
+
 
 PygletGraphicBackend.display_map.update({ \
 	'sprite' : PygletGraphicBackend.display_sprite,
@@ -886,6 +1006,7 @@ class Config(object):
 	# config data values
 	graphic_backend = 'sdl'
 	event_loop_backend = 'sdl'
+	keyboard_backend = 'sdl'
 	resolution = 800, 600
 	caption = 'nurse game engine'
 	sdl_flags = pygame.constants.DOUBLEBUF | pygame.constants.HWSURFACE | \
@@ -899,8 +1020,11 @@ class Config(object):
 		'pyglet' : (PygletGraphicBackend, (resolution, caption))}
 	event_loop_backend_map = {'sdl' : SdlEventLoop,
 				'pyglet' : PygletEventLoop}
+	keyboard_backend_map = {'sdl' : SdlKeyBoardDevice,
+				'pyglet' : PygletKeyBoardDevice}
 	graphic_backend_instance =  None
 	event_loop_backend_instance = None
+	keyboard_backend_instance = None
 	# FIXME : add devices (keyboard, mouse) backend
 
 	@classmethod
@@ -936,6 +1060,17 @@ class Config(object):
 				instance.on_draw = win.event(instance.on_draw)
 		return cls.event_loop_backend_instance
 
+	@classmethod
+	def get_keyboard_backend(cls):
+		if cls.keyboard_backend_instance is None:
+			c = cls.keyboard_backend_map[cls.keyboard_backend]
+			cls.keyboard_backend_instance = c()
+			if cls.keyboard_backend == 'pyglet':
+				gfx = cls.get_graphic_backend()
+				win = gfx.get_screen().get_raw_image()
+				instance = cls.keyboard_backend_instance
+				instance.attach_window(win)
+		return cls.keyboard_backend_instance
 
 #-------------------------------------------------------------------------------
 def create_bg(context):
@@ -1020,11 +1155,11 @@ def create_dialog(context):
 
 #-------------------------------------------------------------------------------
 def main():
-	Config.graphic_backend = Config.event_loop_backend = 'pyglet'
+	Config.graphic_backend = Config.event_loop_backend = \
+				Config.keyboard_backend = 'pyglet'
 	Config.init()
 
 	#FIXME : find another way to add the device
-	Object.universe.add_sdl_device(SDL_device())
 	context_manager = ContextManager()
 	Object.universe.context_manager = context_manager
 
@@ -1039,7 +1174,8 @@ def main():
 	context_dialog = Context("Dialog", **properties_all_inactive)
 	context_pause = Context("Pause", **properties_all_inactive)
 	context_fps = Context("fps", **properties_all_active)
-	signal_pause = (pygame.constants.KEYDOWN, pygame.constants.K_p)
+	signal_pause = (KeyBoardDevice.constants.KEYDOWN,
+				KeyBoardDevice.constants.K_p)
 	signal_dialog_on = "dialog_on"
 	signal_dialog_off = "dialog_off"
 	context_ingame.add_transition(context_manager, signal_pause,
@@ -1086,10 +1222,7 @@ def main():
 
 	# FPS
 	event_loop = Config.get_event_loop_backend()
-	print event_loop
 	event_loop.start()
-	pyglet.clock.schedule_interval(event_loop.update, 1. / 60.)
-	pyglet.app.run()
 
 if __name__ == "__main__" : main()
 #-------------------------------------------------------------------------------
