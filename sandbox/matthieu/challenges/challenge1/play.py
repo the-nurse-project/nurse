@@ -346,14 +346,6 @@ class Context(State):
 		self.notify(event.signal, event.signal_data)
 
 
-class Text(State):
-	def __init__(self, name, perso, text, writing_machine_mode=True):
-		State.__init__(self, name)
-		self.perso = perso
-		self.text = text
-		self.writing_machine_mode = writing_machine_mode
-
-
 class StateMachine(State):
 	START = 0
 	STOP = 1
@@ -725,10 +717,25 @@ class UniformLayer(Sprite):
 		pass
 
 
-class Dialog(StateMachine):
-	def __init__(self, name, context, layer=2):
-		StateMachine.__init__(self, 'dialog')
-		context.add_visible_data(self, layer)
+class Text(State):
+	def __init__(self, name='text', text='...', font='Times New Roman',
+		font_size=20, perso=None, writing_machine_mode=True):
+		State.__init__(self, name)
+		self.text = text
+		self.font = font
+		self.font_size = font_size
+		self.perso = perso
+		self.writing_machine_mode = writing_machine_mode
+		self.backend_repr = Config.get_graphic_backend().load_text(self)
+
+
+class Dialog(Sprite):
+	def __init__(self, name='dialog', context=None, layer=2):
+		Sprite.__init__(self, name, context, layer)
+
+	def update(self, dt): #FIXME : on devrait pas avoir a updater le dialog?
+		pass
+
 
 
 class FpsSprite(Sprite):
@@ -794,10 +801,10 @@ class GraphicBackend(object):
 	def display(self, screen, obj):
 		if isinstance(obj, FpsSprite):
 			type = 'fps'
-		elif isinstance(obj, Sprite):
-			type = 'sprite'
 		elif isinstance(obj, Dialog):
 			type = 'dialog'
+		elif isinstance(obj, Sprite):
+			type = 'sprite'
 		else:	type = None
 		self.display_map[type](self, screen, obj)
 
@@ -814,6 +821,12 @@ class GraphicBackend(object):
 		raise NotImplementedError
 
 	def clean(self):
+		raise NotImplementedError
+
+	def load_text(self, text):	
+		raise NotImplementedError
+
+	def load_image(self, filename):	
 		raise NotImplementedError
 
 	def get_uniform_surface(self, shift=(0, 0), size=None,
@@ -846,10 +859,10 @@ class SdlGraphicBackend(GraphicBackend):
 		true_fps = self._clock.get_fps()
 		text = self._font.render(str(true_fps), True,
 			fps.fg_color, fps.bg_color)
-		self._screen.blit(text, fps.get_location()) #FIXME
+		self._screen.blit(text, fps.get_location())
 
 	def flip(self):
-		pygame.display.flip() #FIXME
+		pygame.display.flip()
 
 	def clean(self):
 		self._screen.fill((0, 0, 0))
@@ -894,23 +907,28 @@ class PygletGraphicBackend(GraphicBackend):
 							caption=caption)
 		self._fps_display = pyglet.clock.ClockDisplay()
 
-	def _invert_y_axis(self, img, pos_y):
-		return self._win.height - pos_y - img.height
+	def _invert_y_axis(self, img_height, pos_y):
+		return self._win.height - pos_y - img_height
 
 	def display_sprite(self, screen, sprite):
 		sprite, dst_pos, src_rect = GraphicBackend.display_sprite(self,
 							screen, sprite)
-		dst_pos[1] = self._invert_y_axis(sprite, dst_pos[1])
+		dst_pos[1] = self._invert_y_axis(sprite.height, dst_pos[1])
 		sprite.set_position(*dst_pos)
 		sprite.draw()
 		# FIXME use src_rect
 
 	def display_dialog(self, screen, dialog):
-		pass # FIXME
+		repr = dialog._current_state.backend_repr
+		pos = dialog.get_location()
+		repr.x = pos[0]
+		repr.y = self._invert_y_axis(repr.content_height, pos[1])
+		repr.draw()
 
 	def display_fps(self, screen, fps):
 		pos = list(fps.get_location())
-		pos[1] = self._invert_y_axis(self._fps_display.label, pos[1])
+		pos[1] = self._invert_y_axis(self._fps_display.label.height,
+								pos[1])
 		self._fps_display.label.x = pos[0]
 		self._fps_display.label.y = pos[1]
 		self._fps_display.draw()
@@ -932,6 +950,11 @@ class PygletGraphicBackend(GraphicBackend):
 		sprite = pyglet.sprite.Sprite(img, 0, 0)
 		return PygletImageProxy(sprite)
 
+	def load_text(self, text):	
+		return pyglet.text.Label(text.text,
+				font_name=text.font,
+				font_size=text.font_size, x=0, y=0)
+			
 	def get_screen(self):
 		return SdlImageProxy(self._win)
 	
@@ -1137,25 +1160,34 @@ def create_dialog(context):
 	uniform = UniformLayer('dial3', context, layer=3, size=(w, h),
 			shift=(0, h * 1.12), color=(0, 0, 128), alpha=255)
 	uniform.start()
-	dialog = Dialog('dialog', context, layer=1)
+	dialog = Dialog('dialog', context, layer=4)
 	msg = [
-		('player', '...<20>...<20>mmm...<20>où...où suis-je ?\n' + \
+		('player', '...<20>...<20>mmm...<20>ou...ou suis-je ?\n' + \
 		"ahh...mes yeux !\n" + \
 		"Laissons leur le temps de s'habituer\n", True), 
 		('player', "Mais<20>c'est un hopital !\n" + \
 		"Voyons. Jambes...<20>OK. Bras...<20>OK. Tete...<20>OK.", True),
 		('nurse', "Ho! J'ai entendu du bruit dans la chambre " + \
-		"d'à côté", False),
+		"d'a cote", False),
 		('player', 'Bon...allons chercher des renseignements.', True)
 	]
+	states = []
 	for i, (perso, txt, writing_machine_mode) in enumerate(msg):
-		state = Text('state_%d' % i, perso, txt, writing_machine_mode)
+		state = Text('state_%d' % i, txt, 'Times New Roman', 20,
+					perso, writing_machine_mode)
 		dialog.add_state(state)
+		states.append(state)
+
+	signal = (KeyBoardDevice.constants.KEYDOWN,
+			KeyBoardDevice.constants.K_DOWN)
+	for i in range(len(states) - 1):
+		states[i].add_transition(context, signal, states[i + 1])
+	dialog.set_initial_state(states[0])
+	dialog.set_location(np.array([180, 400]))
 	dialog.start()
-	sprite = StaticSprite('sprite', context, layer=4,
-				imgname='perso.png')
+	sprite = StaticSprite('sprite', context, layer=4, imgname='perso.png')
 	sprite.set_location(np.array([-270, 180]))
-	sprite.start()
+	sprite.start() # FIXME
 
 #-------------------------------------------------------------------------------
 def main():
