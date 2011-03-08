@@ -719,14 +719,72 @@ class UniformLayer(Sprite):
 
 class Text(State):
 	def __init__(self, name='text', text='...', font='Times New Roman',
-		font_size=20, perso=None, writing_machine_mode=True):
+		font_size=20, max_width=100, max_lines=3, perso=None,
+		char_per_sec=5., writing_machine_mode=True):
 		State.__init__(self, name)
-		self.text = text
+		self._text = text
 		self.font = font
 		self.font_size = font_size
+		self.max_width = max_width
+		self.max_lines = max_lines
 		self.perso = perso
+		if writing_machine_mode:
+			self.char_delay = 1000. / char_per_sec
+		else:	self.char_delay = 0
 		self.writing_machine_mode = writing_machine_mode
-		self.backend_repr = Config.get_graphic_backend().load_text(self)
+		self.list_backend_repr = []
+		self._current_time = 0
+		self._current_indice = 0
+		self._current_text = ''
+		self._current_height = 0
+	
+	def _update_chars(self, n):
+		max_ind = len(self._text)
+		ind = self._current_indice
+		if ind == max_ind: return
+		new_ind = ind + n
+#		for i in range(n): self._update_char()
+#
+#	def _update_char(self):
+#		max_ind = len(self._text)
+#		ind = self._current_indice
+#		if ind == max_ind: return
+#		new_ind = ind + 1
+		if new_ind > max_ind: new_ind = max_ind
+		new_text = self._text[ind:new_ind]
+		self._current_text += new_text
+		self._current_indice = new_ind
+		anchor_x, anchor_y = self._fsm.get_location()
+		repr = Config.get_graphic_backend().load_text(\
+				self._current_text, self.font, self.font_size,
+				anchor_x, anchor_y + self._current_height)
+		if repr.content_width <= self.max_width:
+			if len(self.list_backend_repr) == 0:
+				self.list_backend_repr.append(repr)
+			else:	self.list_backend_repr[-1] = repr
+		else:
+			self._current_height += repr.content_height
+			repr = Config.get_graphic_backend().load_text(\
+				new_text, self.font, self.font_size,
+				anchor_x, anchor_y + self._current_height)
+			self.list_backend_repr.append(repr)
+			self._current_text = new_text
+			if len(self.list_backend_repr) > self.max_lines:
+				del self.list_backend_repr[0]
+				Config.get_graphic_backend().shift_text(self,
+							repr.content_height)
+				self._current_height -= repr.content_height
+				
+	def update(self, dt):
+		# if self.writing_machine_mode:
+		self._current_time += dt	
+		if self._current_time >= self.char_delay:
+			if self.char_delay == 0:
+				n = len(self._text)
+			else:	n = int(self._current_time / self.char_delay)
+			self._update_chars(n)
+			self._current_time -= n * self.char_delay
+		
 
 
 class Dialog(Sprite):
@@ -734,8 +792,7 @@ class Dialog(Sprite):
 		Sprite.__init__(self, name, context, layer)
 
 	def update(self, dt): #FIXME : on devrait pas avoir a updater le dialog?
-		pass
-
+		self._current_state.update(dt)
 
 
 class FpsSprite(Sprite):
@@ -919,11 +976,8 @@ class PygletGraphicBackend(GraphicBackend):
 		# FIXME use src_rect
 
 	def display_dialog(self, screen, dialog):
-		repr = dialog._current_state.backend_repr
-		pos = dialog.get_location()
-		repr.x = pos[0]
-		repr.y = self._invert_y_axis(repr.content_height, pos[1])
-		repr.draw()
+		repr_list = dialog._current_state.list_backend_repr
+		for repr in repr_list: repr.draw()
 
 	def display_fps(self, screen, fps):
 		pos = list(fps.get_location())
@@ -950,10 +1004,16 @@ class PygletGraphicBackend(GraphicBackend):
 		sprite = pyglet.sprite.Sprite(img, 0, 0)
 		return PygletImageProxy(sprite)
 
-	def load_text(self, text):	
-		return pyglet.text.Label(text.text,
-				font_name=text.font,
-				font_size=text.font_size, x=0, y=0)
+	def load_text(self, text, font='Times New Roman',
+				font_size=20, x=0, y=0):
+		label = pyglet.text.Label(text, font_name=font,
+				font_size=font_size, x=x, y=y)
+		label.y = self._invert_y_axis(label.content_height, y)
+		return label
+
+	def shift_text(self, text, shift):
+		repr_list = text.list_backend_repr
+		for repr in repr_list: repr.y += shift
 			
 	def get_screen(self):
 		return SdlImageProxy(self._win)
@@ -1162,11 +1222,26 @@ def create_dialog(context):
 	uniform.start()
 	dialog = Dialog('dialog', context, layer=4)
 	msg = [
-		('player', '...<20>...<20>mmm...<20>ou...ou suis-je ?\n' + \
-		"ahh...mes yeux !\n" + \
-		"Laissons leur le temps de s'habituer\n", True), 
-		('player', "Mais<20>c'est un hopital !\n" + \
-		"Voyons. Jambes...<20>OK. Bras...<20>OK. Tete...<20>OK.", True),
+		('player', '... ...mmm...ou...ou suis-je ?' + \
+		"ahh...mes yeux !" + \
+		"Laissons leur le temps de s'habituer" + \
+		'... ...mmm...ou...ou suis-je ?' + \
+		"ahh...mes yeux !" + \
+		"Laissons leur le temps de s'habituer" + \
+		'... ...mmm...ou...ou suis-je ?' + \
+		"ahh...mes yeux !" + \
+		"Laissons leur le temps de s'habituer" + \
+		'... ...mmm...ou...ou suis-je ?' + \
+		"ahh...mes yeux !" + \
+		"Laissons leur le temps de s'habituer" + \
+		'... ...mmm...ou...ou suis-je ?' + \
+		"ahh...mes yeux !" + \
+		"Laissons leur le temps de s'habituer", True), 
+		#('player', '...%1...%1mmm...%1ou...ou suis-je ?\n' + \
+		#"ahh...mes yeux !\n" + \
+		#"Laissons leur le temps de s'habituer\n", True), 
+		('player', "Mais%1c'est un hopital !\n" + \
+		"Voyons. Jambes...%1OK. Bras...%1OK. Tete...%1OK.", True),
 		('nurse', "Ho! J'ai entendu du bruit dans la chambre " + \
 		"d'a cote", False),
 		('player', 'Bon...allons chercher des renseignements.', True)
@@ -1174,7 +1249,7 @@ def create_dialog(context):
 	states = []
 	for i, (perso, txt, writing_machine_mode) in enumerate(msg):
 		state = Text('state_%d' % i, txt, 'Times New Roman', 20,
-					perso, writing_machine_mode)
+				500, 5, perso, 20., writing_machine_mode)
 		dialog.add_state(state)
 		states.append(state)
 
