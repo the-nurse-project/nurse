@@ -12,6 +12,9 @@ class Object(object):
 	def set_property(self, name, value):
 		self.__setattr__(name, value)
 
+	def is_receiving_events(self):
+		return True
+
 
 class Observable(Object):
 	def __init__(self):
@@ -140,7 +143,7 @@ class KeyBoardDevice(Observable):
 	constants = enum.Enum(*(['KEYDOWN', 'KEYUP'] + \
 		['K_' + chr(i) for i in range(ord('a'), ord('z') + 1)] + \
 		['K_' + str(i) for i in range(10)] + \
-		['K_UP', 'K_DOWN', 'K_LEFT', 'K_RIGHT', 'K_ESCAPE'] + \
+		['K_UP', 'K_DOWN', 'K_LEFT', 'K_RIGHT', 'K_ESCAPE', 'K_SPACE']+\
 		['UNKNOWN']))
 
 	def __init__(self):
@@ -166,7 +169,7 @@ class SdlKeyBoardDevice(KeyBoardDevice):
 		keysym_map[pygame.constants.__getattribute__(key)] = \
 			KeyBoardDevice.constants.__getattribute__(key)
 	for key in ['K_UP', 'K_DOWN', 'K_LEFT', 'K_RIGHT', 'K_ESCAPE',
-		'KEYDOWN', 'KEYUP']:
+		'K_SPACE', 'KEYDOWN', 'KEYUP']:
 		keysym_map[pygame.constants.__getattribute__(key)] = \
 			KeyBoardDevice.constants.__getattribute__(key)
 	
@@ -205,7 +208,7 @@ class PygletKeyBoardDevice(KeyBoardDevice):
 		key = str(i)
 		keysym_map[pyglet.window.key.__getattribute__('NUM_' + key)] = \
 			KeyBoardDevice.constants.__getattribute__('K_' + key)
-	for key in ['UP', 'DOWN', 'LEFT', 'RIGHT', 'ESCAPE']:
+	for key in ['UP', 'DOWN', 'LEFT', 'RIGHT', 'ESCAPE', 'SPACE']:
 		keysym_map[pyglet.window.key.__getattribute__(key)] = \
 			KeyBoardDevice.constants.__getattribute__('K_' + key)
 
@@ -233,7 +236,6 @@ class PygletKeyBoardDevice(KeyBoardDevice):
 	def on_key_release(self, symbol, modifiers):
 		key = self._get_key_from_symbol(symbol)
 		self.notify((KeyBoardDevice.constants.KEYUP, key),True, False)
-
 		return pyglet.event.EVENT_HANDLED
 
 
@@ -245,8 +247,12 @@ class Event(Object):
 		self.observers = observers
 
 	def start(self):
-		for observer in self.observers:
-			observer.receive_event(self)
+		# done in 2 passes to avoid domino effect if some observers
+		# is_receiving_events status change after a first observer
+		# receive a signal.
+		active_observers = [observer for observer in self.observers \
+					if observer.is_receiving_events()]
+		for observer in active_observers: observer.receive_event(self)
 
 
 class SignalEvent(Event):
@@ -307,17 +313,20 @@ class State(Observable):
 
 	def on_exit(self): pass
 
+	def is_receiving_events(self):
+		return self._fsm._current_state == self
+
 
 class Context(State):
 	def __init__(self, name, is_visible=True, is_active=True,
-					is_receiving_events=True):
+					_is_receiving_events=True):
 		State.__init__(self, name)
 		self._visible_data = {}
 		self._screens = []
 		self._fsm_list = []
 		self.is_visible = is_visible
 		self.is_active = is_active
-		self.is_receiving_events = is_receiving_events
+		self._is_receiving_events = _is_receiving_events
 
 	def add_fsm(self, fsm):
 		self._fsm_list.append(fsm)
@@ -344,6 +353,9 @@ class Context(State):
 
 	def delegate(self, event):
 		self.notify(event.signal, event.signal_data)
+
+	def is_receiving_events(self):
+		return self._is_receiving_events
 
 
 class StateMachine(State):
@@ -400,7 +412,8 @@ class StateMachine(State):
 	def on_exit(self):
 		self.stop()
 
-	def post_event(self): pass #FIXME
+	def is_receiving_events(self):
+		return True
 
 
 class ContextManager(StateMachine):
@@ -414,9 +427,9 @@ class ContextManager(StateMachine):
 		try:
 			self._current_state.receive_event(event)
 		except KeyError:
-			for state in self._possible_states.values():
-				if state.is_receiving_events:
-					state.delegate(event)
+			for context in self._possible_states.values():
+				if context.is_receiving_events():
+					context.delegate(event)
 
 	def display(self):
 		Config.get_graphic_backend().clean()
@@ -717,7 +730,7 @@ class UniformLayer(Sprite):
 		pass
 
 
-class Text(State):
+class DialogState(State):
 	def __init__(self, name='text', text='...', font='Times New Roman',
 		font_size=20, max_width=100, max_lines=3, perso=None,
 		char_per_sec=5., writing_machine_mode=True):
@@ -743,13 +756,6 @@ class Text(State):
 		ind = self._current_indice
 		if ind == max_ind: return
 		new_ind = ind + n
-#		for i in range(n): self._update_char()
-#
-#	def _update_char(self):
-#		max_ind = len(self._text)
-#		ind = self._current_indice
-#		if ind == max_ind: return
-#		new_ind = ind + 1
 		if new_ind > max_ind: new_ind = max_ind
 		new_text = self._text[ind:new_ind]
 		self._current_text += new_text
@@ -776,7 +782,6 @@ class Text(State):
 				self._current_height -= repr.content_height
 				
 	def update(self, dt):
-		# if self.writing_machine_mode:
 		self._current_time += dt	
 		if self._current_time >= self.char_delay:
 			if self.char_delay == 0:
@@ -791,8 +796,23 @@ class Dialog(Sprite):
 	def __init__(self, name='dialog', context=None, layer=2):
 		Sprite.__init__(self, name, context, layer)
 
-	def update(self, dt): #FIXME : on devrait pas avoir a updater le dialog?
+	def update(self, dt):
 		self._current_state.update(dt)
+
+
+class Text(Sprite):
+	def __init__(self, name='text', context=None, layer=2,
+		text='...', font='Times New Roman', font_size=20):
+		Sprite.__init__(self, name, context, layer)
+		self.text = text
+		self.font = font
+		self.font_size = font_size
+		self.backend_repr = None
+
+	def update(self, dt): #FIXME : on devrait pas avoir a updater le dialog?
+		self.backend_repr = Config.get_graphic_backend().load_text(\
+				self.text, self.font, self.font_size,
+				self._location[0], self._location[1])
 
 
 class FpsSprite(Sprite):
@@ -860,6 +880,8 @@ class GraphicBackend(object):
 			type = 'fps'
 		elif isinstance(obj, Dialog):
 			type = 'dialog'
+		elif isinstance(obj, Text):
+			type = 'text'
 		elif isinstance(obj, Sprite):
 			type = 'sprite'
 		else:	type = None
@@ -911,6 +933,10 @@ class SdlGraphicBackend(GraphicBackend):
 		# FIXME
 		pass
 
+	def display_text(self, screen, text):
+		# FIXME
+		pass
+
 	def display_fps(self, screen, fps):
 		self._clock.tick()
 		true_fps = self._clock.get_fps()
@@ -949,6 +975,7 @@ class SdlGraphicBackend(GraphicBackend):
 SdlGraphicBackend.display_map.update({ \
 	'sprite' : SdlGraphicBackend.display_sprite,
 	'dialog' : SdlGraphicBackend.display_dialog,
+	'text' : SdlGraphicBackend.display_text,
 	'fps' : SdlGraphicBackend.display_fps})
 
 
@@ -978,6 +1005,10 @@ class PygletGraphicBackend(GraphicBackend):
 	def display_dialog(self, screen, dialog):
 		repr_list = dialog._current_state.list_backend_repr
 		for repr in repr_list: repr.draw()
+
+	def display_text(self, screen, text):
+		repr = text.backend_repr
+		if repr is not None: repr.draw()
 
 	def display_fps(self, screen, fps):
 		pos = list(fps.get_location())
@@ -1019,6 +1050,14 @@ class PygletGraphicBackend(GraphicBackend):
 		return SdlImageProxy(self._win)
 	
 
+PygletGraphicBackend.display_map.update({ \
+	'sprite' : PygletGraphicBackend.display_sprite,
+	'dialog' : PygletGraphicBackend.display_dialog,
+	'text' : PygletGraphicBackend.display_text,
+	'fps' : PygletGraphicBackend.display_fps})
+
+
+
 class PygletUniformSurface(object):
 	def __init__(self, shift, size, color, alpha):
 		self._x, self._y = int(shift[0]), int(shift[1])
@@ -1041,12 +1080,6 @@ class PygletUniformSurface(object):
 		self._batch.draw()
 		glDisable(GL_BLEND)
 		glPopMatrix()
-
-
-PygletGraphicBackend.display_map.update({ \
-	'sprite' : PygletGraphicBackend.display_sprite,
-	'dialog' : PygletGraphicBackend.display_dialog,
-	'fps' : PygletGraphicBackend.display_fps})
 
 
 #-------------------------------------------------------------------------------
@@ -1224,19 +1257,7 @@ def create_dialog(context):
 	msg = [
 		('player', '... ...mmm...ou...ou suis-je ?' + \
 		"ahh...mes yeux !" + \
-		"Laissons leur le temps de s'habituer" + \
-		'... ...mmm...ou...ou suis-je ?' + \
-		"ahh...mes yeux !" + \
-		"Laissons leur le temps de s'habituer" + \
-		'... ...mmm...ou...ou suis-je ?' + \
-		"ahh...mes yeux !" + \
-		"Laissons leur le temps de s'habituer" + \
-		'... ...mmm...ou...ou suis-je ?' + \
-		"ahh...mes yeux !" + \
-		"Laissons leur le temps de s'habituer" + \
-		'... ...mmm...ou...ou suis-je ?' + \
-		"ahh...mes yeux !" + \
-		"Laissons leur le temps de s'habituer", True), 
+		"Laissons leur le temps de s'habituer.", True), 
 		#('player', '...%1...%1mmm...%1ou...ou suis-je ?\n' + \
 		#"ahh...mes yeux !\n" + \
 		#"Laissons leur le temps de s'habituer\n", True), 
@@ -1248,18 +1269,21 @@ def create_dialog(context):
 	]
 	states = []
 	for i, (perso, txt, writing_machine_mode) in enumerate(msg):
-		state = Text('state_%d' % i, txt, 'Times New Roman', 20,
-				500, 5, perso, 20., writing_machine_mode)
+		state = DialogState('state_%d' % i, txt, 'Times New Roman', 20,
+				400, 5, perso, 20., writing_machine_mode)
 		dialog.add_state(state)
 		states.append(state)
 
 	signal = (KeyBoardDevice.constants.KEYDOWN,
-			KeyBoardDevice.constants.K_DOWN)
+			KeyBoardDevice.constants.K_SPACE)
 	for i in range(len(states) - 1):
 		states[i].add_transition(context, signal, states[i + 1])
 	dialog.set_initial_state(states[0])
 	dialog.set_location(np.array([180, 400]))
 	dialog.start()
+	next = Text('text', context, 4, '...', 'Times New Roman', 40)
+	next.set_location(np.array([650, 480]))
+	next.start()
 	sprite = StaticSprite('sprite', context, layer=4, imgname='perso.png')
 	sprite.set_location(np.array([-270, 180]))
 	sprite.start() # FIXME
@@ -1276,15 +1300,15 @@ def main():
 
 	# manage context
 	properties_all_active = { 'is_visible' : True, 'is_active' : True,
-				'is_receiving_events' : True}
+				'_is_receiving_events' : True}
 	properties_all_inactive = { 'is_visible' : False, 'is_active' : False,
-				'is_receiving_events' : False} 
+				'_is_receiving_events' : False} 
 	properties_game_inpause = { 'is_visible' : True, 'is_active' : False,
-				'is_receiving_events' : False}
+				'_is_receiving_events' : False}
 	context_ingame = Context("In game")
 	context_dialog = Context("Dialog", **properties_all_inactive)
 	context_pause = Context("Pause", **properties_all_inactive)
-	context_fps = Context("fps", **properties_all_active)
+	context_fps = Context("fps", **properties_all_inactive)
 	signal_pause = (KeyBoardDevice.constants.KEYDOWN,
 				KeyBoardDevice.constants.K_p)
 	signal_dialog_on = "dialog_on"
