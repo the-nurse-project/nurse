@@ -6,75 +6,103 @@ import pygame
 import pyglet
 from pyglet.gl import *
 
+
+#-------------------------------------------------------------------------------
+class Event(object): pass
+
+
+class SignalEvent(Event):
+	def __init__(self, sender, method, signal, signal_data=None):
+		self.type = 'signal'
+		self.sender = sender # unused
+		self.method = method
+		self.signal = signal # unused
+		self.signal_data = signal_data
+
+	def start(self):
+		self.method(self)
+
+
 #-------------------------------------------------------------------------------
 class Object(object):
+	def __init__(self, name):
+		self.name = name
+		self._sync_connections = {'__all__' : []}		
+		self._async_connections = {'__all__' : []}		
+
 	def set_property(self, name, value):
 		self.__setattr__(name, value)
 
 	def is_receiving_events(self):
 		return True
 
-
-class Observable(Object):
-	def __init__(self):
-		Object.__init__(self)
-		self._observers = {'__all__' : []}
-
-	def attach(self, observer, signal):
-		if not observer in self._observers:
-			self._observers.setdefault(signal, []).append(observer)
-
-	def detach(self, observer, signal):
-		try:
-			self._observers[signal].remove(observer)
-		except ValueError:
-			pass
-
-	def notify(self, signal, signal_data=None,
-			batch=True, asynchronous=True):
+	def connect(self, signal, receiver, slot="receive_events",
+						asynchronous=True):
 		'''
-    Notify all concerned observers that a signal has been raised.
+    mimic qt signal/slot connection
 
-    signal:            any pickable object.
-    signal_data:       additional data.
-    batch:             True if all observers are notified in one event.
-    asynchronous:      True if the notification is asynchronous.
+    signal:        any pickable object. If signal is equal to __all__ the slot
+                   function will be called for any signal.
+    receiver:      destination object.
+    slot:          name of the function to call on the receiver.
+    asynchronous:  true if the the slot is queued in the eventloop.
+                   false if the slot is called directly during the emit call.
 		'''
-		# FIXME : asynchronisme a gerer du cote de l'observer plutot
-		# FIXME : recevoir un signal non attendu est-il normal ?
-		if self._observers.has_key(signal):
-			observers = self._observers[signal]
-		else:	observers = []
-		observers += self._observers['__all__']
-		if len(observers) == 0: return
+		connection = (receiver, slot)
 		if asynchronous:
-			event_loop = Config.get_event_loop_backend()
-			if batch is True:
-				event = SignalEvent(self, observers,
-						signal, signal_data)
-				event_loop.add_event(event)
-			else:
-				for observer in observers:
-					event = SignalEvent(self, [observer],
-							signal, signal_data)
-					event_loop.add_event(event)
-		else:
-			# for synchronoous events : data are batched
-			event = SignalEvent(self, observers,
-					signal, signal_data)
-			event.start()
+			connections = self._async_connections
+		else:	connections = self._sync_connections
+		connections.setdefault(signal, []).append(connection)
+
+	def disconnect(self, signal, receiver, slot="receive_events",
+						asynchronous=True):
+		connection = (receiver, slot, asynchronous)
+		connections = self._connections[signal]
+		del connections[connections.index(connection)]
+
+	def emit(self, signal, signal_data=None):
+		try:
+			async_connections = self._async_connections[signal]
+		except KeyError:
+			async_connections = []
+		async_connections += self._async_connections['__all__']
+		try:
+			sync_connections = self._sync_connections[signal]
+		except KeyError:
+			sync_connections = []
+		sync_connections += self._sync_connections['__all__']
+
+		# batch active slots :
+		#   done in 2 passes to avoid domino effect if some observers
+		#   is_receiving_events status change after a first observer
+		#   receive a signal.
+		connections = [(receiver, slot) \
+			for (receiver, slot) in sync_connections
+			if receiver.is_receiving_events()]
+
+		for (receiver, slot) in connections:
+			method = receiver.__getattribute__(slot)
+			event = SignalEvent(self, method, signal, signal_data)
+			method(event)
+
+		connections = [(receiver, slot) \
+			for (receiver, slot) in async_connections
+			if receiver.is_receiving_events()]
+
+		event_loop = Config.get_event_loop_backend()
+		for (receiver, slot) in connections:
+			method = receiver.__getattribute__(slot)
+			event = SignalEvent(self, method, signal, signal_data)
+			event_loop.add_event(event)
 
 
-class Universe(Object):
-	def __init__(self):
-		Object.__init__(self)
+universe = Object('universe')
 
-Object.universe = Universe()
-	
+
 #-------------------------------------------------------------------------------
 class EventLoop(Object):
 	def __init__(self, fps = 60.):
-		Object.__init__(self)
+		Object.__init__(self, 'event_loop')
 		self.fps = fps
 		self._pending_events = []
 
@@ -103,8 +131,8 @@ class SdlEventLoop(EventLoop):
 			self.update(dt)
 
 	def update(self, dt):
-		Object.universe.context_manager.display()
-		Object.universe.context_manager.update(dt)
+		universe.context_manager.display()
+		universe.context_manager.update(dt)
 
 	def read_events(self):
 		if len(self._pending_events) != 0:
@@ -126,11 +154,11 @@ class PygletEventLoop(EventLoop):
     dt : delay in seconds between 2 calls of this method
                 '''
 		self.read_events()
-		Object.universe.context_manager.update(dt * 1000.)
+		universe.context_manager.update(dt * 1000.)
 
 	@classmethod
 	def on_draw(cls):
-		Object.universe.context_manager.display()
+		universe.context_manager.display()
 
 	def read_events(self):
 		if len(self._pending_events) != 0:
@@ -138,7 +166,7 @@ class PygletEventLoop(EventLoop):
 			e.start()
 
 #-------------------------------------------------------------------------------
-class KeyBoardDevice(Observable):
+class KeyBoardDevice(Object):
 	constants = enum.Enum(*(['KEYDOWN', 'KEYUP'] + \
 		['K_' + chr(i) for i in range(ord('a'), ord('z') + 1)] + \
 		['K_' + str(i) for i in range(10)] + \
@@ -146,7 +174,7 @@ class KeyBoardDevice(Observable):
 		['UNKNOWN']))
 
 	def __init__(self):
-		Observable.__init__(self)
+		Object.__init__(self, 'keyboard_device')
 
 	@classmethod
 	def _get_key_from_symbol(cls, symbol):
@@ -193,7 +221,7 @@ class SdlKeyBoardDevice(KeyBoardDevice):
 		else:
 			type = self._get_key_from_symbol(event.type)
 			key = self._get_key_from_symbol(event.key)
-			self.notify((type, key),True, False)
+			self.emit((type, key))
 
 
 class PygletKeyBoardDevice(KeyBoardDevice):
@@ -229,61 +257,26 @@ class PygletKeyBoardDevice(KeyBoardDevice):
 			self.fullscreen = not self.fullscreen
 		
 		key = self._get_key_from_symbol(symbol)
-		self.notify((KeyBoardDevice.constants.KEYDOWN, key),True, False)
+		self.emit((KeyBoardDevice.constants.KEYDOWN, key))
 		return pyglet.event.EVENT_HANDLED
 
 	def on_key_release(self, symbol, modifiers):
 		key = self._get_key_from_symbol(symbol)
-		self.notify((KeyBoardDevice.constants.KEYUP, key),True, False)
+		self.emit((KeyBoardDevice.constants.KEYUP, key))
 		return pyglet.event.EVENT_HANDLED
 
 
 #-------------------------------------------------------------------------------
-class Event(Object):
-	def __init__(self, sender, observers):
-		Object.__init__(self)
-		self.sender = sender
-		self.observers = observers
-
-	def start(self):
-		# done in 2 passes to avoid domino effect if some observers
-		# is_receiving_events status change after a first observer
-		# receive a signal.
-		active_observers = [observer for observer in self.observers \
-					if observer.is_receiving_events()]
-		for observer in active_observers: observer.receive_event(self)
-
-
-class SignalEvent(Event):
-	def __init__(self, sender, observers, signal, signal_data=None):
-		Event.__init__(self, sender, observers)
-		self.signal = signal
-		self.signal_data = signal_data
-		self.type = 'signal'
-
-
-class UpdateEvent(Event):
-	def __init__(self, sender, observers):
-		Event.__init__(self, sender, observers)
-		self.type = 'update'
-
-
-#-------------------------------------------------------------------------------
-class State(Observable):
+class State(Object):
 	def __init__(self, name):
-		Observable.__init__(self)
-		# FIXME : parent/child/hiearchical state not handle yet
-		self._name = name
+		Object.__init__(self, name)
 		self._fsm = None
 		self._assign_properties = []
 		self._transitions = {}
 
-	def get_name(self):
-		return self._name
-
 	def add_transition(self, sender, signal, state,
-			src_prop={}, dst_prop={}):
-		sender.attach(self, signal)
+			src_prop={}, dst_prop={}, asynchronous=True):
+		sender.connect(signal, self, "on_transition", asynchronous)
 		self._transitions[signal] = (sender, state, src_prop, dst_prop)
 
 	def assign_property(self, obj, name, value):
@@ -293,27 +286,22 @@ class State(Observable):
 		del self._transitions[transition]
 		self._initial_state = state
 
-	def receive_event(self, event):
+	def is_receiving_events(self):
+		return self._fsm._current_state == self
+
+	# slots
+	def on_entered(self):
+		for (obj, name, value) in self._assign_properties:
+			obj.set_property(name, value)
+		self.emit("entered")
+
+	def on_exited(self):
+		self.emit("exited")
+
+	def on_transition(self, event):
 		sender, state, src_prop, dst_prop = \
 			self._transitions[event.signal]
 		self._fsm.change_state(self, state, src_prop, dst_prop)
-
-	def _signal_entered(self):
-		for (obj, name, value) in self._assign_properties:
-			obj.set_property(name, value)
-		self.on_entry()
-		self.notify("entered")
-
-	def _signal_exited(self):
-		self.on_exit()
-		self.notify("exited")
-
-	def on_entry(self): pass
-
-	def on_exit(self): pass
-
-	def is_receiving_events(self):
-		return self._fsm._current_state == self
 
 
 class Context(State):
@@ -351,7 +339,7 @@ class Context(State):
 			fsm.update(dt)
 
 	def delegate(self, event):
-		self.notify(event.signal, event.signal_data)
+		self.emit(event.signal, event.signal_data)
 
 	def is_receiving_events(self):
 		return self._is_receiving_events
@@ -374,22 +362,19 @@ class StateMachine(State):
 		self._initial_state = state
 
 	def add_state(self, state):
-		self._possible_states[state.get_name()] = state
+		self._possible_states[state.name] = state
 		state._fsm = self
 
 	def change_state(self, src, dst, src_prop={}, dst_prop={}):
 		if src != self._current_state: return
 		if self._current_state is not None:
-			self._current_state._signal_exited()
+			self._current_state.on_exited()
 		self._current_state = dst 
 		if self._current_state is not None:
-			self._current_state._signal_entered()
+			self._current_state.on_entered()
 		for k, v in src_prop.items(): src.set_property(k, v)
 		for k, v in dst_prop.items(): dst.set_property(k, v)
-		self.notify("state changed", (src, dst))
-
-	def finished(self):
-		pass
+		self.emit("state_changed", (src, dst))
 
 	def start(self):
 		if self._initial_state is None:
@@ -397,34 +382,37 @@ class StateMachine(State):
 			self.add_state(default_state)
 			self._initial_state = default_state
 		self._current_state = self._initial_state
-		self._current_state._signal_entered()
+		self._current_state.on_entered()
 		self.status = StateMachine.START
-		self.notify("started")
+		self.emit("started")
 
 	def stop(self):
 		self.status = StateMachine.STOP
-		self.notify("stopped")
+		self.emit("stopped")
 
+	def is_receiving_events(self):
+		return True
+
+	# slots
 	def on_entry(self):
 		self.start()
 
 	def on_exit(self):
 		self.stop()
 
-	def is_receiving_events(self):
-		return True
-
 
 class ContextManager(StateMachine):
 	def __init__(self):
 		StateMachine.__init__(self, 'Context Manager')
-		Config.get_keyboard_backend().attach(self, '__all__')
+		signal = '__all__'
+		Config.get_keyboard_backend().connect(signal, self,
+						asynchronous=False)
 
-	def receive_event(self, event):
+	def receive_events(self, event):
 		# - try to modify the current context
 		# - then notify observers
 		try:
-			self._current_state.receive_event(event)
+			self._current_state.on_transition(event)
 		except KeyError:
 			for context in self._possible_states.values():
 				if context.is_receiving_events():
@@ -602,7 +590,7 @@ class MovingSprite(Sprite):
 		while s > 0:
 			p = self._checkpoint
 			n = self.get_next_checkpoint_id()
-			state_name = self._current_state.get_name()
+			state_name = self._current_state.name
 			id = self._state_name_to_id[state_name]
 			if id == 0: return
 			delta = (self._directions.T[id - 1] * dt) * \
@@ -619,7 +607,7 @@ class MovingSprite(Sprite):
 				#remaining time to cover path during this update
 				dt -= dist * 1000 / self._speed
 		self._location = new_loc
-		self.notify("location_changed", asynchronous=False)
+		self.emit("location_changed", new_loc)
 
 
 class Player(Sprite):
@@ -677,10 +665,10 @@ class Player(Sprite):
 				'right-down' : 6, 'down' : 7, 'left-down' : 8}
 
 	def update(self, dt):
-		state_name = self._current_state.get_name()
+		state_name = self._current_state.name
 		# time = pygame.time.get_ticks()
 		# delta = (time - self._previous_time)
-		# f = float(delta) / Object.universe._update_delay
+		# f = float(delta) / universe._update_delay
 		# self._previous_time = time
 		if state_name == 'rest': return
 		id = self._state_name_to_id[state_name]
@@ -689,7 +677,7 @@ class Player(Sprite):
 		new_loc = self._location + delta
 		# FIXME: test if new_loc is available
 		self._location = new_loc
-		self.notify("location_changed", asynchronous=False)
+		self.emit("location_changed", new_loc)
 
 
 
@@ -1097,10 +1085,12 @@ class VirtualScreen(Object):
                 (center of the screen).
     focus_on:   follow location of the given object (call get_location() func).
 		'''
+		Object.__init__(self, name)
 		self._x, self._y, self._width, self._height = geometry
 		self.set_focus(focus)
 		if focus_on is not None:
-			focus_on.attach(self, "location_changed")
+			focus_on.connect("location_changed", self,
+				"on_focus_changed", asynchronous=False)
 		self.dst_pos = None
 
 	def set_focus(self, focus):
@@ -1114,10 +1104,9 @@ class VirtualScreen(Object):
 	def display(self, obj):
 		Config.get_graphic_backend().display(self, obj)
 
-	def receive_event(self, event):
-		if event.type == 'signal':
-			if event.signal == 'location_changed':
-				self.set_focus(event.sender.get_location())
+	def on_focus_changed(self, event):
+		location = event.signal_data
+		self.set_focus(location)
 
 
 #-------------------------------------------------------------------------------

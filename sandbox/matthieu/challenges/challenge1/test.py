@@ -106,7 +106,7 @@ def main():
 
 	#FIXME : find another way to add the device
 	context_manager = ContextManager()
-	Object.universe.context_manager = context_manager
+	universe.context_manager = context_manager
 
 	# manage context
 	properties_all_active = { 'is_visible' : True, 'is_active' : True,
@@ -138,7 +138,8 @@ def main():
 	context_manager.set_initial_state(context_ingame)
 	context_manager.start()
 
-	event = SignalEvent(None, [context_manager], signal_dialog_on)
+	event = SignalEvent(None, context_ingame.on_transition,
+					signal_dialog_on)
 	event.start()
 
 	resolution = Config.resolution
