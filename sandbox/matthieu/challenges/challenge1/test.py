@@ -42,26 +42,25 @@ def create_nurse(context):
 	return fsm
 
 def create_dialog(context):
-	screen = Config.get_graphic_backend().get_screen() # FIXME
+	screen = Config.get_graphic_backend().get_screen()
+	ws, hs = screen.get_width(), screen.get_height()
 	uniform = UniformLayer('dark', context, layer=0,
 				color=(0, 0, 0), alpha=128)
 	uniform.start()
-	w, h = screen.get_width(), screen.get_height()
-	w *= 0.8
-	h *= 0.3
-	uniform = UniformLayer('dial1', context, layer=1, size=(w, h),
-				shift=(0, h), color=(255, 255, 255), alpha=255)
+
+	w, h = int(ws * 0.8), int(hs * 0.3)
+	x, y = (ws - w) / 2., hs - h - 50
+	uniform = UniformLayer('dial1', context, layer=1,
+				size=(w, h), shift=(x, y),
+				color=(255, 255, 255), alpha=255)
 	uniform.start()
-	w -= 2
-	h -= 2
-	uniform = UniformLayer('dial2', context, layer=2, size=(w, h),
-				shift=(0, h + 2), color=(0, 0, 64), alpha=255)
+	uniform = UniformLayer('dial2', context, layer=2,
+				size=(w - 2, h - 2), shift=(x + 1, y + 1),
+				color=(0, 0, 64), alpha=255)
 	uniform.start()
-	w, h = screen.get_width(), screen.get_height()
-	w *= 0.8 * 0.98
-	h *= 0.3 * 0.9
-	uniform = UniformLayer('dial3', context, layer=3, size=(w, h),
-			shift=(0, h * 1.12), color=(0, 0, 128), alpha=255)
+	uniform = UniformLayer('dial3', context, layer=3,
+			size=(w - 4, h - 4), shift=(x + 2, y + 2),
+			color=(0, 0, 128), alpha=255)
 	uniform.start()
 	dialog = Dialog('dialog', context, layer=4)
 	msg = [
@@ -95,7 +94,7 @@ def create_dialog(context):
 	next.set_location(np.array([650, 480]))
 	next.start()
 	sprite = StaticSprite('sprite', context, layer=4, imgname='perso.png')
-	sprite.set_location(np.array([-270, 180]))
+	sprite.set_location(np.array([x + (180 - x) / 2, y + h / 2]))
 	sprite.start() # FIXME
 
 #-------------------------------------------------------------------------------
@@ -149,13 +148,13 @@ def main():
 	create_bg(context_ingame)
 	player = create_player(context_ingame)
 	create_nurse(context_ingame)
-	screen_game = VirtualScreen('main screen', geometry,
+	screen_game = VirtualScreenWorldCoordinates('main screen', geometry,
 				player.get_location(), player)
 	context_ingame.add_screen(screen_game)
 
 	# pause context
 	create_pause(context_pause)
-	screen_fixed = VirtualScreen('fixed screen', geometry, (0, 0))
+	screen_fixed = VirtualScreenRealCoordinates('fixed screen', geometry)
 	context_pause.add_screen(screen_fixed)
 
 	# dialog context

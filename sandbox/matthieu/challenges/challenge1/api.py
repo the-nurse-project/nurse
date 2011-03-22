@@ -14,9 +14,9 @@ class Event(object): pass
 class SignalEvent(Event):
 	def __init__(self, sender, method, signal, signal_data=None):
 		self.type = 'signal'
-		self.sender = sender # unused
+		self.sender = sender
 		self.method = method
-		self.signal = signal # unused
+		self.signal = signal
 		self.signal_data = signal_data
 
 	def start(self):
@@ -408,6 +408,19 @@ class ContextManager(StateMachine):
 		Config.get_keyboard_backend().connect(signal, self,
 						asynchronous=False)
 
+	def display(self):
+		Config.get_graphic_backend().clean()
+		for context in self._possible_states.values():
+			if context.is_visible:
+				context.display()
+		Config.get_graphic_backend().flip()
+
+	def update(self, dt):
+		for context in self._possible_states.values():
+			if context.is_active:
+				context.update(dt)
+
+	# slots
 	def receive_events(self, event):
 		# - try to modify the current context
 		# - then notify observers
@@ -418,17 +431,6 @@ class ContextManager(StateMachine):
 				if context.is_receiving_events():
 					context.delegate(event)
 
-	def display(self):
-		Config.get_graphic_backend().clean()
-		for state in self._possible_states.values():
-			if state.is_visible:
-				state.display()
-		Config.get_graphic_backend().flip()
-
-	def update(self, dt):
-		for state in self._possible_states.values():
-			if state.is_active:
-				state.update(dt)
 
 
 class Sprite(StateMachine):
@@ -680,7 +682,6 @@ class Player(Sprite):
 		self.emit("location_changed", new_loc)
 
 
-
 class StaticSprite(Sprite):
 	def __init__(self, name, context, layer=0, imgname=None):
 		Sprite.__init__(self, name, context, layer)
@@ -704,12 +705,9 @@ class UniformLayer(Sprite):
 		gfx = Config.get_graphic_backend()
 		self._surface = gfx.get_uniform_surface(shift, size,
 							color, alpha)
-		Sprite.set_location(self, np.array(shift))
 		self._center = np.array(self._surface.get_size()) /2.
+		Sprite.set_location(self, np.array(shift) + self._center)
 	
-	def set_location(self, location):
-		pass
-
 	def get_frame_infos(self, time):
 		return self._surface, self._center
 
@@ -803,6 +801,7 @@ class Text(Sprite):
 
 
 class FpsSprite(Sprite):
+	'''Compute and display current FPS (Frames per second) rate.'''
 	def __init__(self, name='fps', context=None, layer=3,
 		fg_color=(255, 255, 255), bg_color=(0, 0, 0)):
 		Sprite.__init__(self, name, context, layer)
@@ -813,7 +812,6 @@ class FpsSprite(Sprite):
 	def update(self, dt):
 		pass
 
-pygame.init() # FIXME
 #-------------------------------------------------------------------------------
 class ImageProxy(object):
 	def __init__(self, raw_image):
@@ -879,7 +877,7 @@ class GraphicBackend(object):
 		frame_proxy, center = sprite.get_frame_infos(time)
 		if frame_proxy is None: return
 		raw_img = frame_proxy.get_raw_image()
-		dst_pos = screen.get_shift() + sprite.get_location() - center
+		dst_pos = screen.get_ref() + sprite.get_location() - center
 		src_rect = None # FIXME : clip the area to blit
 		return (raw_img, dst_pos, src_rect)
 
@@ -889,7 +887,11 @@ class GraphicBackend(object):
 	def clean(self):
 		raise NotImplementedError
 
-	def load_text(self, text):	
+	def load_text(self, text, font='Times New Roman',
+				font_size=20, x=0, y=0):
+		raise NotImplementedError
+
+	def load_image(self, filename):
 		raise NotImplementedError
 
 	def load_image(self, filename):	
@@ -954,6 +956,10 @@ class SdlGraphicBackend(GraphicBackend):
 		flags = pygame.constants.SRCCOLORKEY | pygame.constants.RLEACCEL
 		surface.set_colorkey(alpha_color, flags)
 		return SdlImageProxy(surface)
+
+	def load_text(self, text, font='Times New Roman',
+				font_size=20, x=0, y=0):
+		return None #FIXME
 
 	def get_screen(self):
 		return SdlImageProxy(self._screen)
@@ -1071,11 +1077,26 @@ class PygletUniformSurface(object):
 
 #-------------------------------------------------------------------------------
 class VirtualScreen(Object):
+	def __init__(self, name, geometry=(0, 0, 320, 200)):
+		self._x, self._y, self._width, self._height = geometry
+
+	def display(self, obj):
+		Config.get_graphic_backend().display(self, obj)
+
+	def get_ref(self):
+		'''
+    Return the referential coordinates (top-left corner of the virtual screen
+    defined in real screen pixel coordinates).
+		'''
+		return self._ref_center
+
+
+
+class VirtualScreenWorldCoordinates(VirtualScreen):
 	def __init__(self, name='default_screen', geometry=(0, 0, 320, 200),
 				focus=np.array([0, 0]), focus_on=None):
 		'''
     name:       name of the screen
-    context:    context of the screen
     geometry:   geometry of the screen: tuple (x, y, w, h):
                 x: x position of the bottom left border in screen coordinates
                 y: y position of the bottom left border in screen coordinates
@@ -1085,8 +1106,7 @@ class VirtualScreen(Object):
                 (center of the screen).
     focus_on:   follow location of the given object (call get_location() func).
 		'''
-		Object.__init__(self, name)
-		self._x, self._y, self._width, self._height = geometry
+		VirtualScreen.__init__(self, name, geometry)
 		self.set_focus(focus)
 		if focus_on is not None:
 			focus_on.connect("location_changed", self,
@@ -1094,19 +1114,20 @@ class VirtualScreen(Object):
 		self.dst_pos = None
 
 	def set_focus(self, focus):
-		self._shift = np.array([self._x + self._width / 2,
+		self._ref_center = np.array([self._x + self._width / 2,
 					self._y + self._height / 2]) - focus
 		self._focus = focus
-
-	def get_shift(self):
-		return self._shift
-
-	def display(self, obj):
-		Config.get_graphic_backend().display(self, obj)
 
 	def on_focus_changed(self, event):
 		location = event.signal_data
 		self.set_focus(location)
+
+
+class VirtualScreenRealCoordinates(VirtualScreen):
+	def __init__(self, name='default_screen_real_coords',
+			geometry=(0, 0, 320, 200)):
+		VirtualScreen.__init__(self, name, geometry)
+		self._ref_center = np.array([self._x, self._y])
 
 
 #-------------------------------------------------------------------------------
