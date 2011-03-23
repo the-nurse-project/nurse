@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: iso-8859-15 -*-
 
-from api import *
+from nurse.api import *
 
 def create_bg(context):
 	fsm = StaticSprite('hospital', context, layer=0,
