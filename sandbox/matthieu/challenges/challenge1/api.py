@@ -89,7 +89,7 @@ class Object(object):
 			for (receiver, slot) in async_connections
 			if receiver.is_receiving_events()]
 
-		event_loop = Config.get_event_loop_backend()
+		event_loop = Config.get_event_loop()
 		for (receiver, slot) in connections:
 			method = receiver.__getattribute__(slot)
 			event = SignalEvent(self, method, signal, signal_data)
@@ -138,7 +138,7 @@ class SdlEventLoop(EventLoop):
 		if len(self._pending_events) != 0:
 			e = self._pending_events.pop()
 			e.start()
-		Config.get_keyboard_backend().read_events()
+		Config.get_keyboard_device().read_events()
 
 
 class PygletEventLoop(EventLoop):
@@ -405,15 +405,15 @@ class ContextManager(StateMachine):
 	def __init__(self):
 		StateMachine.__init__(self, 'Context Manager')
 		signal = '__all__'
-		Config.get_keyboard_backend().connect(signal, self,
+		Config.get_keyboard_device().connect(signal, self,
 						asynchronous=False)
 
 	def display(self):
-		Config.get_graphic_backend().clean()
+		Config.get_graphic_engine().clean()
 		for context in self._possible_states.values():
 			if context.is_visible:
 				context.display()
-		Config.get_graphic_backend().flip()
+		Config.get_graphic_engine().flip()
 
 	def update(self, dt):
 		for context in self._possible_states.values():
@@ -472,7 +472,7 @@ class Sprite(StateMachine):
     fps:             number of frames per seconds.
 		'''
 		self._frames[state] = [ \
-			Config.get_graphic_backend().load_image(fname) \
+			Config.get_graphic_engine().load_image(fname) \
 			for fname in frames_fnames]
 		self._refresh_delay[state] = int(1000 / fps)
 		loc = []
@@ -702,7 +702,7 @@ class UniformLayer(Sprite):
 	def __init__(self, name, context, layer=2, size=None,
 			shift=(0, 0), color=(0, 0, 0), alpha=128):
 		Sprite.__init__(self, name, context, layer)
-		gfx = Config.get_graphic_backend()
+		gfx = Config.get_graphic_engine()
 		self._surface = gfx.get_uniform_surface(shift, size,
 							color, alpha)
 		self._center = np.array(self._surface.get_size()) /2.
@@ -746,7 +746,7 @@ class DialogState(State):
 		self._current_text += new_text
 		self._current_indice = new_ind
 		anchor_x, anchor_y = self._fsm.get_location()
-		repr = Config.get_graphic_backend().load_text(\
+		repr = Config.get_graphic_engine().load_text(\
 				self._current_text, self.font, self.font_size,
 				anchor_x, anchor_y + self._current_height)
 		if repr.content_width <= self.max_width:
@@ -755,14 +755,14 @@ class DialogState(State):
 			else:	self.list_backend_repr[-1] = repr
 		else:
 			self._current_height += repr.content_height
-			repr = Config.get_graphic_backend().load_text(\
+			repr = Config.get_graphic_engine().load_text(\
 				new_text, self.font, self.font_size,
 				anchor_x, anchor_y + self._current_height)
 			self.list_backend_repr.append(repr)
 			self._current_text = new_text
 			if len(self.list_backend_repr) > self.max_lines:
 				del self.list_backend_repr[0]
-				Config.get_graphic_backend().shift_text(self,
+				Config.get_graphic_engine().shift_text(self,
 							repr.content_height)
 				self._current_height -= repr.content_height
 				
@@ -795,7 +795,7 @@ class Text(Sprite):
 		self.backend_repr = None
 
 	def update(self, dt): #FIXME : on devrait pas avoir a updater le dialog?
-		self.backend_repr = Config.get_graphic_backend().load_text(\
+		self.backend_repr = Config.get_graphic_engine().load_text(\
 				self.text, self.font, self.font_size,
 				self._location[0], self._location[1])
 
@@ -1081,7 +1081,7 @@ class VirtualScreen(Object):
 		self._x, self._y, self._width, self._height = geometry
 
 	def display(self, obj):
-		Config.get_graphic_backend().display(self, obj)
+		Config.get_graphic_engine().display(self, obj)
 
 	def get_ref(self):
 		'''
@@ -1133,9 +1133,7 @@ class VirtualScreenRealCoordinates(VirtualScreen):
 #-------------------------------------------------------------------------------
 class Config(object):
 	# config data values
-	graphic_backend = 'sdl'
-	event_loop_backend = 'sdl'
-	keyboard_backend = 'sdl'
+	backend = 'sdl'
 	resolution = 800, 600
 	caption = 'nurse game engine'
 	sdl_flags = pygame.constants.DOUBLEBUF | pygame.constants.HWSURFACE | \
@@ -1159,8 +1157,9 @@ class Config(object):
 	@classmethod
 	def init(cls):
 		# instanciate backends
-		Config.get_graphic_backend()
-		Config.get_event_loop_backend()
+		Config.get_graphic_engine()
+		Config.get_event_loop()
+		Config.get_keyboard_device()
 
 	@classmethod
 	def read_config_file(cls):
@@ -1171,31 +1170,31 @@ class Config(object):
 		return Config.default_context
 
 	@classmethod
-	def get_graphic_backend(cls):
+	def get_graphic_engine(cls):
 		if cls.graphic_backend_instance is None:
-			c, args = cls.graphic_backend_map[cls.graphic_backend]
+			c, args = cls.graphic_backend_map[cls.backend]
 			cls.graphic_backend_instance = c(*args)
 		return cls.graphic_backend_instance
 
 	@classmethod
-	def get_event_loop_backend(cls):
+	def get_event_loop(cls):
 		if cls.event_loop_backend_instance is None:
-			c = cls.event_loop_backend_map[cls.event_loop_backend]
+			c = cls.event_loop_backend_map[cls.backend]
 			cls.event_loop_backend_instance = c(Config.fps)
-			if cls.event_loop_backend == 'pyglet':
-				gfx = cls.get_graphic_backend()
+			if cls.backend == 'pyglet':
+				gfx = cls.get_graphic_engine()
 				win = gfx.get_screen().get_raw_image()
 				instance = cls.event_loop_backend_instance
 				instance.on_draw = win.event(instance.on_draw)
 		return cls.event_loop_backend_instance
 
 	@classmethod
-	def get_keyboard_backend(cls):
+	def get_keyboard_device(cls):
 		if cls.keyboard_backend_instance is None:
-			c = cls.keyboard_backend_map[cls.keyboard_backend]
+			c = cls.keyboard_backend_map[cls.backend]
 			cls.keyboard_backend_instance = c()
-			if cls.keyboard_backend == 'pyglet':
-				gfx = cls.get_graphic_backend()
+			if cls.backend == 'pyglet':
+				gfx = cls.get_graphic_engine()
 				win = gfx.get_screen().get_raw_image()
 				instance = cls.keyboard_backend_instance
 				instance.attach_window(win)

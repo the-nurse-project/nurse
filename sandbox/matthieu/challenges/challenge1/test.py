@@ -42,7 +42,7 @@ def create_nurse(context):
 	return fsm
 
 def create_dialog(context):
-	screen = Config.get_graphic_backend().get_screen()
+	screen = Config.get_graphic_engine().get_screen()
 	ws, hs = screen.get_width(), screen.get_height()
 	uniform = UniformLayer('dark', context, layer=0,
 				color=(0, 0, 0), alpha=128)
@@ -99,8 +99,7 @@ def create_dialog(context):
 
 #-------------------------------------------------------------------------------
 def main():
-	Config.graphic_backend = Config.event_loop_backend = \
-				Config.keyboard_backend = 'pyglet'
+	Config.backend = 'pyglet'
 	Config.init()
 
 	#FIXME : find another way to add the device
@@ -166,7 +165,7 @@ def main():
 	context_fps.add_screen(screen_fixed)
 
 	# FPS
-	event_loop = Config.get_event_loop_backend()
+	event_loop = Config.get_event_loop()
 	event_loop.start()
 
 if __name__ == "__main__" : main()
