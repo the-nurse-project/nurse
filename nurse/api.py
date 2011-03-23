@@ -912,7 +912,7 @@ class SdlGraphicBackend(GraphicBackend):
 		self._screen = pygame.display.set_mode(resolution, flags)
 		self._clock = pygame.time.Clock()
 		self._font = pygame.font.Font(None, 40)
-		self._img_path = 'pix'
+		self._img_path = '../data/pix'
 
 	def display_sprite(self, screen, sprite):
 		res = GraphicBackend.display_sprite(self, screen, sprite)
@@ -978,7 +978,7 @@ class PygletGraphicBackend(GraphicBackend):
 	def __init__(self, resolution, caption):
 		GraphicBackend.__init__(self)
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-		pyglet.resource.path.append('pix')
+		pyglet.resource.path.append('../data/pix')
 		pyglet.resource.reindex()
 		self._win = pyglet.window.Window(resolution[0], resolution[1],
 							caption=caption)
