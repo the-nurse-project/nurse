@@ -1,7 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: iso-8859-15 -*-
 
-from nurse.api import *
+from nurse import *
+from nurse.base import *
+from nurse.config import *
+from nurse.sprite import *
+from nurse.context import *
+from nurse.backends import *
+from nurse.screen import *
 
 def create_bg(context):
 	fsm = StaticSprite('hospital', context, layer=0,

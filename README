@@ -1,0 +1,3 @@
+# To test examples, from the root directory:
+# on bash :
+export PYTHONPATH=$PYTHONPATH:$PWD
