@@ -3,12 +3,13 @@ import numpy as np
 from base import Object
 from config import Config
 
+
 class VirtualScreen(Object):
 	def __init__(self, name, geometry=(0, 0, 320, 200)):
-		self._x, self._y, self._width, self._height = geometry
+		self.geometry = geometry
 
-	def display(self, obj):
-		Config.get_graphic_engine().display(self, obj)
+	def display_context(self, context):
+		Config.get_graphic_engine().display_context(self, context)
 
 	def get_ref(self):
 		'''
@@ -40,8 +41,9 @@ class VirtualScreenWorldCoordinates(VirtualScreen):
 		self.dst_pos = None
 
 	def set_focus(self, focus):
-		self._ref_center = np.array([self._x + self._width / 2,
-					self._y + self._height / 2]) - focus
+		x, y, width, height = self.geometry
+		self._ref_center = \
+			np.array([x + width / 2, y + height / 2]) - focus
 		self._focus = focus
 
 	def on_focus_changed(self, event):
@@ -53,4 +55,5 @@ class VirtualScreenRealCoordinates(VirtualScreen):
 	def __init__(self, name='default_screen_real_coords',
 			geometry=(0, 0, 320, 200)):
 		VirtualScreen.__init__(self, name, geometry)
-		self._ref_center = np.array([self._x, self._y])
+		x, y, width, height = self.geometry
+		self._ref_center = np.array([x, y])

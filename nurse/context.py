@@ -25,12 +25,9 @@ class Context(State):
 		self._screens.append(screen)
 
 	def display(self):
-		data = self.get_visible_data()
 		for screen in self._screens:
-			for layer, objects in data.items(): # from bg to fg
-				for obj in objects:
-					screen.display(obj)
-	
+			screen.display_context(self)
+
 	def update(self, dt):
 		for fsm in self._fsm_list:
 			fsm.update(dt)

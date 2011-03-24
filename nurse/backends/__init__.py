@@ -52,7 +52,13 @@ class GraphicEngine(object):
 			GraphicEngine.instances[cls] = object.__new__(cls)
 		return GraphicEngine.instances[cls]
 
-	def display(self, screen, obj):
+	def display_context(self, screen, context):
+		data = context.get_visible_data()
+		for layer, objects in data.items(): # from bg to fg
+			for obj in objects:
+				self.display_object(screen, obj)
+	
+	def display_object(self, screen, obj):
 		# FIXME: move somewherelse
 		from ..sprite import FpsSprite, Dialog, Text, Sprite 
 		if isinstance(obj, FpsSprite):

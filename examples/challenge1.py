@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: iso-8859-15 -*-
 
-from nurse import *
 from nurse.base import *
-from nurse.config import *
+from nurse.config import Config
 from nurse.sprite import *
-from nurse.context import *
-from nurse.backends import *
+from nurse.context import Context, ContextManager
 from nurse.screen import *
+
 
 def create_bg(context):
 	fsm = StaticSprite('hospital', context, layer=0,
 				imgname='hopital.png')
 	fsm.set_location(np.array([-100, -100]))
 	fsm.start()
+
 
 def create_pause(context):
 	fsm = StaticSprite('pause', context, layer=2,
@@ -33,6 +33,7 @@ def create_player(context):
 	fsm.start()
 	return fsm
 
+
 def create_nurse(context):
 	p1 = [40, -200]
 	p2 = [140, -200]
@@ -46,6 +47,7 @@ def create_nurse(context):
 	fsm.set_path(path)
 	fsm.start()
 	return fsm
+
 
 def create_dialog(context):
 	screen = Config.get_graphic_engine().get_screen()
@@ -103,6 +105,7 @@ def create_dialog(context):
 	sprite.set_location(np.array([x + (180 - x) / 2, y + h / 2]))
 	sprite.start() # FIXME
 
+
 #-------------------------------------------------------------------------------
 def main():
 	Config.backend = 'pyglet'
@@ -144,7 +147,7 @@ def main():
 
 	event = SignalEvent(None, context_ingame.on_transition,
 					signal_dialog_on)
-	event.start()
+	#event.start()
 
 	resolution = Config.resolution
 	geometry = (0, 0, resolution[0], resolution[1])
@@ -175,6 +178,3 @@ def main():
 	event_loop.start()
 
 if __name__ == "__main__" : main()
-#-------------------------------------------------------------------------------
-# Notes:
-# 1) gerer 2 touches actives en meme temps : Left et Up par ex (un seul event actif avec SDL)

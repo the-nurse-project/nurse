@@ -94,7 +94,7 @@ class PygletUniformSurface(object):
 		self.height = int(size[1])
 		x2, y2 = self.width, self.height
 		self._batch = pyglet.graphics.Batch()
-		self._batch.add(4, pyglet.gl.GL_QUADS, None,
+		self._batch.add(4, GL_QUADS, None,
 			('v2i', [0, 0, x2, 0, x2, y2, 0, y2]),
 			('c4B', (list(color) + [int(alpha)]) * 4))
 
@@ -116,7 +116,6 @@ class PygletGraphicEngine(GraphicEngine):
 	
 	def __init__(self, resolution, caption):
 		GraphicEngine.__init__(self)
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 		pyglet.resource.path.append('../data/pix')
 		pyglet.resource.reindex()
 		self._win = pyglet.window.Window(resolution[0], resolution[1],
@@ -126,13 +125,24 @@ class PygletGraphicEngine(GraphicEngine):
 	def _invert_y_axis(self, img_height, pos_y):
 		return self._win.height - pos_y - img_height
 
+	def display_context(self, screen, context):
+		# clipping according to screen geometry
+		x, y, width, height = screen.geometry
+		glViewport(x, y, width, height)
+		glMatrixMode(GL_PROJECTION)
+		glLoadIdentity()
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+		glOrtho(x, x + width, y, y + height, -1, 1)
+		glMatrixMode(GL_MODELVIEW)
+
+		GraphicEngine.display_context(self, screen, context)
+
 	def display_sprite(self, screen, sprite):
 		sprite, dst_pos, src_rect = GraphicEngine.display_sprite(self,
 							screen, sprite)
 		dst_pos[1] = self._invert_y_axis(sprite.height, dst_pos[1])
 		sprite.set_position(*dst_pos)
 		sprite.draw()
-		# FIXME use src_rect
 
 	def display_dialog(self, screen, dialog):
 		repr_list = dialog._current_state.list_backend_repr

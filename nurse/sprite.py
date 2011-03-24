@@ -143,7 +143,8 @@ class MovingSprite(Sprite):
 		d = np.array(self._path[n]) - np.array(self._path[p])
 		self._current_dir = d
 		if np.abs(d).sum() == 0:
-			state = 'rest'
+			id = self._state_name_to_id['rest']
+			state = self._indice_states[id]
 		else:
 			# FIXME : verifier qu'il n'y a pas d'inversion haut/bas
 			dot = np.dot(d, self._directions)
