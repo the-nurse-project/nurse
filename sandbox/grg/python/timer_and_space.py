@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: iso-8859-15 -*-
 
 from nurse import *
 from nurse.base import *
@@ -34,41 +33,40 @@ class Timer(Object):
 		
 #-------------------------------------------------------------------------------
 def main():
+	# init
 	Config.backend = 'pyglet'
-	#Config.graphic_backend = Config.event_loop_backend = \
-	#				Config.keyboard_backend = 'pyglet'
 	Config.init()
 
 	context_manager = ContextManager()
 	universe.context_manager = context_manager
 
-	properties_all_active = { 'is_visible' : True, 'is_active' : True,
-				'_is_receiving_events' : True}
-	properties_all_inactive = { 'is_visible' : False, 'is_active' : False,
-				'_is_receiving_events' : False}
-	context = Context("Pause", **properties_all_active)
+	context = Context("context")
+	geometry = (0, 0, Config.resolution[0], Config.resolution[1])
+	screen = VirtualScreenRealCoordinates('main screen', geometry)
+	context.add_screen(screen)
 
 	context_manager.add_state(context)
 	context_manager.set_initial_state(context)
 	context_manager.start()
 
+	# dynamic text
 	text = Text('text', context, 4, 'plop', 'Times New Roman', 40)
-	text.set_location(np.array([650, 480]))
+	text.set_location(np.array([Config.resolution[0] / 2,
+					Config.resolution[1] / 2]))
 	text.start()
-	screen = VirtualScreen('main screen')
-	context.add_screen(screen)
+
 	incrementator = Incrementator()
 	incrementator.text = text
-	context.connect((KeyBoardDevice.constants.KEYDOWN, KeyBoardDevice.constants.K_SPACE),
-			incrementator, "on_space_press" )
+	signal = (KeyBoardDevice.constants.KEYDOWN,
+			KeyBoardDevice.constants.K_SPACE)
+	context.connect(signal, incrementator, "on_space_press" )
 
 	t =  Timer('test')
 	t.connect("time_event", incrementator, "on_time_event" )
 	t.start()
+
+	# start
 	event_loop = Config.get_event_loop()
 	event_loop.start()
 
 if __name__ == "__main__" : main()
-#-------------------------------------------------------------------------------
-# Notes:
-# 1) gerer 2 touches actives en meme temps : Left et Up par ex (un seul event actif avec SDL)

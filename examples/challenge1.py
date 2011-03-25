@@ -147,7 +147,7 @@ def main():
 
 	event = SignalEvent(None, context_ingame.on_transition,
 					signal_dialog_on)
-	#event.start()
+	event.start()
 
 	resolution = Config.resolution
 	geometry = (0, 0, resolution[0], resolution[1])
