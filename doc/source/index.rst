@@ -12,6 +12,7 @@ Contents:
    :maxdepth: 1
 
    generating_documentation_using_sphinx_on_github
+   minimal_example
 
 Indices and tables
 ==================
