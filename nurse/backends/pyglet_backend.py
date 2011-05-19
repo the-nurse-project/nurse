@@ -41,7 +41,7 @@ class PygletKeyBoardDevice(KeyBoardDevice):
 		key = str(i)
 		keysym_map[pyglet.window.key.__getattribute__('NUM_' + key)] = \
 			KeyBoardDevice.constants.__getattribute__('K_' + key)
-	for key in ['UP', 'DOWN', 'LEFT', 'RIGHT', 'ESCAPE', 'SPACE']:
+	for key in ['UP', 'DOWN', 'LEFT', 'RIGHT', 'ESCAPE', 'SPACE', 'RETURN']:
 		keysym_map[pyglet.window.key.__getattribute__(key)] = \
 			KeyBoardDevice.constants.__getattribute__('K_' + key)
 
