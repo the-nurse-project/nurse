@@ -113,3 +113,10 @@ Indices and tables
    :undoc-members:
    :inherited-members:
 
+:mod:`nurse.timer`
+=========================
+
+.. automodule:: nurse.timer
+   :members:
+   :undoc-members:
+   :inherited-members:
