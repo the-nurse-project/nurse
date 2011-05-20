@@ -1,8 +1,7 @@
 .. Minimal example
 
-
 A Minimal Example
-=============================================
+******************
 
 .. code-block:: python
 
@@ -39,6 +38,5 @@ A Minimal Example
                 event_loop.start()
 
         if __name__ == "__main__" : main()
-
 
 

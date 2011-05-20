@@ -13,6 +13,8 @@ Contents:
 
    generating_documentation_using_sphinx_on_github
    minimal_example
+   blink
+   timer_and_space
 
 Indices and tables
 ==================
