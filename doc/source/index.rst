@@ -16,6 +16,7 @@ Contents:
    minimal_example
    blink
    timer_and_space
+   git_crash_course
 
 Indices and tables
 ==================
