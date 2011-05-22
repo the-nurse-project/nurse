@@ -12,6 +12,7 @@ Contents:
    :maxdepth: 1
 
    generating_documentation_using_sphinx_on_github
+   nurse_game_dialog
    minimal_example
    blink
    timer_and_space
