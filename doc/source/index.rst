@@ -13,6 +13,7 @@ Contents:
 
    generating_documentation_using_sphinx_on_github
    nurse_game_dialog
+   nurse_statemachine
    minimal_example
    blink
    timer_and_space
@@ -29,19 +30,6 @@ Indices and tables
 =========================
 
 .. automodule:: nurse.base
-   :members:
-   :undoc-members:
-   :inherited-members:
-
-:mod:`nurse.state_machine`
-==========================
-
-.. warning::
-
-   Don't forget that a Context inheritates from State, a ContextManager inheritates
-   from StateMachine and StateMachine inheritates from State.
-
-.. automodule:: nurse.state_machine
    :members:
    :undoc-members:
    :inherited-members:
@@ -106,14 +94,6 @@ Indices and tables
 =========================
 
 .. automodule:: nurse.sdl_backend
-   :members:
-   :undoc-members:
-   :inherited-members:
-
-:mod:`nurse.game.dialog`
-=========================
-
-.. automodule:: nurse.game.dialog
    :members:
    :undoc-members:
    :inherited-members:

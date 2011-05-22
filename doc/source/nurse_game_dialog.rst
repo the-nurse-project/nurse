@@ -29,3 +29,10 @@ or more specifically each :class:`nurse.context.Context` has its :class:`nurse.s
 updated. With regard to this, the :class:`nurse.game.dialog.DialogContext` updates its sprites,
 therefore the :class:`nurse.sprite.Dialog` and its current :class:`nurse.game.dialog.DialogState`.
 
+:mod:`nurse.game.dialog`
+=========================
+
+.. automodule:: nurse.game.dialog
+   :members:
+   :undoc-members:
+   :inherited-members:
