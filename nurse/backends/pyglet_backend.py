@@ -86,6 +86,24 @@ class PygletImageProxy(ImageProxy):
 	def get_height(self):
 		return self._raw_image.height
 
+	def find_white_area(self):
+		import itertools
+		imwidth = self._raw_image.width
+		raw_data = self._raw_image.get_image_data()
+		pixels = raw_data.get_data(self._raw_image.format, self._raw_image.pitch)
+		index = 0
+		groups = []
+		for bit, group in itertools.groupby(pixels):
+			g = list(group)
+			if bit == 255 and len(g) > 3 and index % 4 == 0:
+				groups.append(index)
+				last_group_length = len(g)
+			index = index + len(g)
+		top_left = ( (groups[0] / 4) % imwidth, (groups[0] / 4) // imwidth )
+		bottom_right = ( ((groups[-1] + last_group_length) / 4) % imwidth,
+				((groups[-1] + last_group_length) / 4) // imwidth )
+		return (top_left, bottom_right)
+
 
 class PygletUniformSurface(object):
 	def __init__(self, shift, size, color, alpha):
