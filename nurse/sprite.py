@@ -62,6 +62,10 @@ class Sprite(StateMachine):
 					loc.append(np.array([width, height])/2.)
 				elif center_location == 'centered_bottom':
 					loc.append(np.array([width/2., height]))
+				elif center_location == 'centered_top':
+					loc.append(np.array([width/2., 0.0]))
+				elif center_location == 'top_left':
+					loc.append(np.array([0.0, 0.0]))
 		elif isinstance(center_location, list):
 			loc = center_location
 		else:	loc = [center_location] * len(self._frames[state])
@@ -273,10 +277,11 @@ class Player(Sprite):
 
 
 class StaticSprite(Sprite):
-	def __init__(self, name, context, layer=0, imgname=None):
+	def __init__(self, name, context, layer=0, center_location='centered',
+			imgname=None):
 		Sprite.__init__(self, name, context, layer)
 		self.load_frames_from_filenames('__default__',
-					[imgname], 'centered', 1)
+					[imgname], center_location, 1)
 
 	def get_frame_infos(self, time):
 		state = '__default__'
