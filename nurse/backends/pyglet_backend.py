@@ -132,7 +132,7 @@ class PygletImageProxy(ImageProxy):
 		    bottom_left[1] - ((last_pixel - first_pixel) / len(c)) // imwidth )
 		top_left = ( bottom_left[0], top_right[1] )
 		bottom_right = ( top_right[0], bottom_left[1] )
-		return (top_left, bottom_right), first_pixel, last_pixel
+		return (top_left, bottom_right)
 
 
 class PygletUniformSurface(object):

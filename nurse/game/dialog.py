@@ -138,23 +138,19 @@ class DialogContext(Context):
 		area = (x,y), (w,h)
 
 		text_area = (area[0][0] + 100, area[0][1] + 30), (area[1][0] - 130, area[1][1] + 60) 
-		uniform = UniformLayer('dial1', self, layer=1,
-					size=(w, h), shift=(x, y),
-					color=(255, 255, 255), alpha=255)
-		uniform.start()
-		uniform = UniformLayer('dial2', self, layer=2,
-					size=(w - 2, h - 2), shift=(x + 1, y + 1),
-					color=(0, 0, 64), alpha=255)
-		uniform.start()
-		uniform = UniformLayer('dial3', self, layer=3,
-				size=(w - 4, h - 4), shift=(x + 2, y + 2),
-				color=(0, 0, 128), alpha=255)
-		uniform.start()
+		print text_area
+		dialog_bg = StaticSprite('dialog_bg', self, layer=4, imgname='dialog.png', center_location='top_left')
+		dialog_bg.set_location([x,y])
+		dialog_bg.start()
+		black_area = dialog_bg._frames['__default__'][0].find_color_area(color='black')
+		print black_area
+		text_area = ((x+black_area[0][0], y+black_area[0][1]), (black_area[1][0]-black_area[0][0], black_area[1][1]-black_area[0][1]))
+		print text_area
 		dialog = Dialog('dialog', self, layer=4)
 		
 		states = []
 		for i, (perso, txt, typing_machine_mode) in enumerate(msg):
-			state = DialogState('state_%d' % i, txt, 'Times New Roman', 20,
+			state = DialogState('state_%d' % i, txt, 'Times New Roman', 13,
 					text_area, perso, 20., typing_machine_mode)
 			dialog.add_state(state)
 			states.append(state)
