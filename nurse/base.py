@@ -55,11 +55,10 @@ class Object(object):
 		connections = [(receiver, slot) \
 			for (receiver, slot) in sync_connections
 			if receiver.is_receiving_events()]
-
 		for (receiver, slot) in connections:
-			method = receiver.__getattribute__(slot)
-			event = SignalEvent(self, method, signal, signal_data)
-			method(event)
+			event = SignalEvent(self, receiver, slot,
+						signal, signal_data)
+			event.start()
 
 		connections = [(receiver, slot) \
 			for (receiver, slot) in async_connections
@@ -68,9 +67,21 @@ class Object(object):
 		from config import Config # FIXME : move somewhere else
 		event_loop = Config.get_event_loop()
 		for (receiver, slot) in connections:
-			method = receiver.__getattribute__(slot)
-			event = SignalEvent(self, method, signal, signal_data)
+			event = SignalEvent(self, receiver, slot,
+						signal, signal_data)
 			event_loop.add_event(event)
+
+	def call_slot(self, slot, event):
+		'''
+    This function is the uniq valid entry point to resolve any slot call.
+    It could be reimplemented by class children to add features around the
+    method call.
+
+    slot:   string name of the function to be called on self.
+    event:  Event instance (pass as parameter to the slot method).
+		'''
+		method = self.__getattribute__(slot)
+		method(event)
 
 
 universe = Object('universe')
