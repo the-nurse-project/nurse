@@ -93,6 +93,7 @@ class SdlGraphicEngine(GraphicEngine):
 		self._screen = pygame.display.set_mode(resolution, flags)
 		self._clock = pygame.time.Clock()
 		self._font = pygame.font.Font(None, 40)
+		# for examples TODO: find a better way
 		self._img_path = '../data/pix'
 
 	def display_sprite(self, screen, sprite):
