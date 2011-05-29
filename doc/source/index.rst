@@ -14,6 +14,7 @@ Contents:
    generating_documentation_using_sphinx_on_github
    nurse_game_dialog
    nurse_statemachine
+   nurse_sprite
    minimal_example
    blink
    timer_and_space
@@ -25,22 +26,6 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-
-:mod:`nurse.base`
-=========================
-
-.. automodule:: nurse.base
-   :members:
-   :undoc-members:
-   :inherited-members:
-
-:mod:`nurse.sprite`
-=========================
-
-.. automodule:: nurse.sprite
-   :members:
-   :undoc-members:
-   :inherited-members:
 
 :mod:`nurse.screen`
 =========================
@@ -85,7 +70,7 @@ Indices and tables
 :mod:`nurse.pyglet_backend`
 ===========================
 
-.. automodule:: nurse.pyglet_backend
+.. automodule:: nurse.backends.pyglet_backend
    :members:
    :undoc-members:
    :inherited-members:
@@ -93,7 +78,7 @@ Indices and tables
 :mod:`nurse.sdl_backend`
 =========================
 
-.. automodule:: nurse.sdl_backend
+.. automodule:: nurse.backends.sdl_backend
    :members:
    :undoc-members:
    :inherited-members:
