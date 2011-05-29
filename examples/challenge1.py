@@ -9,15 +9,15 @@ from nurse.screen import *
 
 
 def create_bg(context):
-	fsm = StaticSprite('hospital', context, layer=0,
-				imgname='hopital.png')
-	fsm.set_location(np.array([-100, -100]))
+	fsm = StaticSprite('hospital', context, layer=0)
+	fsm.load_from_filename('hopital.png')
+	fsm.set_location(np.array([-440, -300]))
 	fsm.start()
 
 
 def create_pause(context):
-	fsm = StaticSprite('pause', context, layer=2,
-				imgname='pause.png')
+	fsm = StaticSprite('pause', context, layer=2)
+	fsm.load_from_filename('pause.png')
 	fsm.set_location(np.array([0, 0]))
 	fsm.start()
 	uniform = UniformLayer('dark', context, layer=0,
@@ -26,7 +26,8 @@ def create_pause(context):
 
 
 def create_player(context):
-	fsm = Player("player", context, layer=2, speed=120.)
+	fsm = AnimatedSprite("player", context, layer=2)
+	fsm.set_motion(KeyboardFullArrowsMotion(speed=120.))
 	fsm.load_frames_from_filenames('__default__', ['perso.png'],
 						'centered_bottom', 1)
 	fsm.set_location(np.array([-260, -140]))
@@ -41,10 +42,12 @@ def create_nurse(context):
 	p4 = [-400, 50]
 	p5 = [200, 50]
 	path = np.array([p1, p2, p3, p4, p5, p3, p2])
-	fsm = MovingSprite("nurse", context, layer=2, speed=180.)
+	motion = PathMotion(speed=180.)
+	motion.set_path(path)
+	fsm = AnimatedSprite("nurse", context, layer=2)
+	fsm.set_motion(motion)
 	fsm.load_frames_from_filenames('__default__', ['infirmiere.png'],
 							'centered_bottom', 1)
-	fsm.set_path(path)
 	fsm.start()
 	return fsm
 
@@ -101,7 +104,8 @@ def create_dialog(context):
 	next = Text('text', context, 4, '...', 'Times New Roman', 40)
 	next.set_location(np.array([650, 480]))
 	next.start()
-	sprite = StaticSprite('sprite', context, layer=4, imgname='perso.png')
+	sprite = StaticSprite('sprite', context, layer=4)
+	sprite.load_from_filename('perso.png')
 	sprite.set_location(np.array([x + (180 - x) / 2, y + h / 2]))
 	sprite.start() # FIXME
 
