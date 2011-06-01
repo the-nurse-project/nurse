@@ -281,12 +281,22 @@ class StaticSprite(Sprite):
 
 class UniformLayer(Sprite):
 	def __init__(self, name, context, layer=2, size=None,
-			shift=(0, 0), color=(0, 0, 0), alpha=128):
+			shift=(0, 0), center_location=(0,0),
+			color=(0, 0, 0), alpha=128):
 		Sprite.__init__(self, name, context, layer)
 		gfx = Config.get_graphic_engine()
 		self._img_proxy= gfx.get_uniform_surface(shift, size,
 							color, alpha)
-		self._bb_center = np.array(self._img_proxy.get_size()) / 2.
+		if isinstance(center_location, str):
+			width, height = np.array(self._img_proxy.get_size())
+			if center_location == 'centered':
+				self._bb_center = np.array([width, height]) / 2.
+			elif center_location == 'centered_bottom':
+				self._bb_center = np.array([width / 2., height])
+			elif center_location == 'top_left':
+				self._bb_center = np.array([0., 0.])
+		else:
+			self._bb_center = np.asarray(center_location)
 		self._size = size
 		self.set_location(shift)
 
