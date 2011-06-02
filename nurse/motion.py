@@ -145,11 +145,62 @@ class PathMotion(Motion):
 		sprite.set_location(new_loc)
 
 
-class KeyboardFullArrowsMotion(Motion):
+class KeyboardMotion(Motion):
 	def __init__(self, name='sprite', context=None, speed=100.):
 		Motion.__init__(self, name, context, speed)
 		if context is not None:
 			self._register_transitions(context)
+
+	def set_context(self, context):
+		Motion.set_context(self, context)
+		self._register_transitions(context)
+
+	def update_sprite(self, sprite, dt):
+		state_name = self._current_state.name
+		if state_name == 'rest': return
+		id = self._state_name_to_id[state_name]
+		delta = (self._delta_moves[id] * dt / 1000.)
+		new_loc = sprite.get_location() + delta
+		# FIXME: test if new_loc is available
+		sprite.set_location(new_loc)
+
+
+class KeyboardLeftRightArrowsMotion(KeyboardMotion):
+	def __init__(self, name='sprite', context=None, speed=100.):
+		KeyboardMotion.__init__(self, name, context, speed)
+
+	def _register_transitions(self, context):
+		states = [State("rest"), State("left"), State("right")]
+		for state in states: self.add_state(state)
+		self.set_initial_state(states[0])
+
+		# left
+		signal = (KeyBoardDevice.constants.KEYDOWN,
+				KeyBoardDevice.constants.K_LEFT)
+		states[0].add_transition(context, signal, states[1])
+		signal = (KeyBoardDevice.constants.KEYUP,
+				KeyBoardDevice.constants.K_LEFT)
+		states[1].add_transition(context, signal, states[0])
+
+		# right
+		signal = (KeyBoardDevice.constants.KEYDOWN,
+				KeyBoardDevice.constants.K_RIGHT)
+		states[0].add_transition(context, signal, states[2])
+		signal = (KeyBoardDevice.constants.KEYUP,
+				KeyBoardDevice.constants.K_RIGHT)
+		states[2].add_transition(context, signal, states[0])
+
+		# moves
+		self._delta_moves = np.array(\
+			[[0, -1., -1., 0, 1., 1., 1., 0, -1.],
+			[0, 0, -1., -1., -1., 0, 1., 1., 1.]]).T
+		self._delta_moves *= self._speed
+		self._state_name_to_id = {"rest" : 0, "left" : 1, 'right' : 5}
+
+
+class KeyboardFullArrowsMotion(KeyboardMotion):
+	def __init__(self, name='sprite', context=None, speed=100.):
+		KeyboardMotion.__init__(self, name, context, speed)
 
 	def _register_transitions(self, context):
 		states = [State("rest"), State("left"), State("left-up"),
@@ -200,16 +251,3 @@ class KeyboardFullArrowsMotion(Motion):
 		self._state_name_to_id = {"rest" : 0, "left" : 1, "left-up" : 2,
 				'up' : 3, 'right-up' : 4, 'right' : 5,
 				'right-down' : 6, 'down' : 7, 'left-down' : 8}
-
-	def set_context(self, context):
-		Motion.set_context(self, context)
-		self._register_transitions(context)
-
-	def update_sprite(self, sprite, dt):
-		state_name = self._current_state.name
-		if state_name == 'rest': return
-		id = self._state_name_to_id[state_name]
-		delta = (self._delta_moves[id] * dt / 1000.)
-		new_loc = sprite.get_location() + delta
-		# FIXME: test if new_loc is available
-		sprite.set_location(new_loc)
