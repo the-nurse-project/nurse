@@ -154,4 +154,61 @@ class Object(object):
 		method(event)
 
 
+class ConditionalObject(Object):
+	def __init__(self, name='conditional_object'):
+		Object.__init__(self, name)
+
+	def unfiltred_slot(self, slot, event):
+		'''
+    This function return true if the given slot/event combination is accepted
+    and can be called. The parameters of this method and of the internal
+    values of attributes of the current self object could be used to block
+    the call of a slot.
+
+    slot:   string name of the function to be called on self.
+    event:  Event instance (pass as parameter to the slot method).
+
+    Return True if the slot is callable.
+
+    Note: This function must be implemented by concrete classes.
+		'''
+		raise RuntimeError("Unimplemented method")
+
+	def call_slot(self, slot, event):
+		'''
+    This function follows the implementation if its parent's class but possibly
+    filtred and block the given slot according to specific consideration
+    determined by the 'unfiltred_slot' method.
+
+    slot:   string name of the function to be called on self.
+    event:  Event instance (pass as parameter to the slot method).
+		'''
+		if self.unfiltred_slot(slot, event):
+			Object.call_slot(self, slot, event)
+
+
+class ObjectProxy(Object):
+	def __init__(self, object):
+		self._object = object
+
+	def __getattribute__(self, *args, **kwargs):
+		'''
+    In case of name conflicts about slots between the wrapped object and a
+    class derived from ObjectProxy, the later is called first and in case of
+    failure the former is called.
+		'''
+		try:
+			return object.__getattribute__(self, *args, **kwargs)
+		except AttributeError:
+		        _object = object.__getattribute__(self, '_object')
+			return _object.__getattribute__(*args, **kwargs)
+
+	def call_slot(self, slot, event):
+		'''
+    This method allows children classes to define their own slots
+		'''
+		method = self.__getattribute__(slot)
+		method(event)
+
+
 universe = Object('universe')

@@ -9,8 +9,6 @@ from nurse.sprite import *
 from nurse.context import Context, ContextManager
 from nurse.screen import *
 
-from test_spatial_event import *
-
 
 #-------------------------------------------------------------------------------
 square_locations = np.zeros((4, 2))
