@@ -35,7 +35,7 @@ def move_squares_randomly(squares):
 		squares[i].set_location(square_locations[ind])
 
 #-------------------------------------------------------------------------------
-class MoveSquaresOnCollision(ObjectProxy):
+class ManageCollision(ObjectProxy):
 	def __init__(self, receiver, text_sprite, text_str):
 		ObjectProxy.__init__(self, receiver)
 		self._squares = []
@@ -57,7 +57,7 @@ def create_colored_square(context, text, color, colorname, resolution):
 	fsm = UniformLayer(colorname, context, layer=0, size=size, shift=shift,
 						color=color, alpha=255)
 	fsm.start()
-	return MoveSquaresOnCollision(fsm, text, colorname)
+	return ManageCollision(fsm, text, colorname)
 
 def create_player(context, resolution):
 	fsm = Player("player", context, layer=2, speed=180.)
@@ -79,7 +79,7 @@ def create_nurse(context, text, resolution):
 							'centered_bottom', 1)
 	fsm.set_path(path)
 	fsm.start()
-	return MoveSquaresOnCollision(fsm, text, 'nurse')
+	return ManageCollision(fsm, text, 'nurse')
 
 #-------------------------------------------------------------------------------
 def main():
