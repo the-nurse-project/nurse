@@ -11,6 +11,7 @@ class Sprite(StateMachine):
     name:  name of the sprite
     layer: (default: 1 since 0 is reserved for background)
     speed: speed in world-coordinate metric per seconds
+
 		'''
 		StateMachine.__init__(self, name, context)
 		if context is None: context = Config.get_default_context()
@@ -41,6 +42,7 @@ class Sprite(StateMachine):
 		  or - 'centered_bottom': the center is centered on the bottom
 		       of the images.
     fps:             number of frames per seconds.
+
 		'''
 		self._frames[state] = [ \
 			Config.get_graphic_engine().load_image(fname) \
@@ -72,6 +74,7 @@ class Sprite(StateMachine):
 	def get_frame_infos(self, time):
 		'''
     Return frame infos for a given time : image uuid, center location
+
 		'''
 		state = self._current_state
 		try:
@@ -90,18 +93,21 @@ class Sprite(StateMachine):
 		'''
     Update sprite location (in world coordinates) according to its
     control state and current active frame
+
 		'''
 		raise NotImplementedError
 
 	def get_location(self):
 		'''
     Return sprite location in world coordinate system
+
 		'''
 		return self._location
 
 	def set_location(self, location):
 		'''
     set sprite location in world coordinate system
+
 		'''
 		self._location = location
 
@@ -118,6 +124,7 @@ class MovingSprite(Sprite):
 					layer=2, speed=100.):
 		'''
     path : list of world coordinates
+
 		'''
 		Sprite.__init__(self, name, context, layer, speed)
 		if context is None: context = Config.get_default_context()
@@ -172,6 +179,7 @@ class MovingSprite(Sprite):
     Update location and state of the sprite.
 
     dt : time since last update
+
 		'''
 		# FIXME: test if new_loc is available
 		s = 1
