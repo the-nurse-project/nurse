@@ -60,7 +60,8 @@ class GraphicEngine(object):
 	
 	def display_object(self, screen, obj):
 		# FIXME: move somewherelse
-		from ..sprite import FpsSprite, Dialog, Text, Sprite 
+		from ..sprite import FpsSprite, Text, Sprite 
+		from ..game.dialog import Dialog
 		if isinstance(obj, FpsSprite):
 			type = 'fps'
 		elif isinstance(obj, Dialog):
