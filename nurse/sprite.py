@@ -22,6 +22,7 @@ class Sprite(StateMachine):
 		self._refresh_delay = {}
 		self._location = np.zeros(2)
 		self._speed = speed
+		self._layer = layer
 
 	def load_frames_from_filenames(self, state,
 		frames_fnames=[], center_location=(0,0), fps=30):

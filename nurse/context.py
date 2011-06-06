@@ -38,6 +38,27 @@ class Context(State):
 	def is_receiving_events(self):
 		return self._is_receiving_events
 
+        def set_visible(self, sprite, is_visible, layer=None):
+               '''
+    set sprite visible or invisible in its parent context
+               '''
+               if is_visible == False:
+                       layers_detected = []    # contains the layers in which the sprite name is found
+                       if layer is None:
+                               layers = self.get_visible_data().keys()
+                               for l in layers:
+                                       for obj in self.get_visible_data()[l] :
+                                               if obj == sprite :
+                                                       layers_detected.append(l)
+		       layer = layers_detected[0]
+					
+                       if len(layers_detected) > 1:
+                              raise Exception('Different sprites match name \'%s\', must specify layer'\
+                                      %sprite.name )
+						
+                       self.get_visible_data()[layer].remove(obj)
+               else :
+                       self.add_visible_data(sprite, sprite._layer)
 
 class ContextManager(StateMachine):
 	def __init__(self):
