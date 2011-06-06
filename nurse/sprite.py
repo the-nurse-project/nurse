@@ -284,15 +284,14 @@ class UniformLayer(Sprite):
 			shift=(0, 0), color=(0, 0, 0), alpha=128):
 		Sprite.__init__(self, name, context, layer)
 		gfx = Config.get_graphic_engine()
-		self._surface = gfx.get_uniform_surface(shift, size,
+		self._img_proxy= gfx.get_uniform_surface(shift, size,
 							color, alpha)
-		self._center = np.array(self._surface.get_size()) / 2.
+		self._bb_center = np.array(self._img_proxy.get_size()) / 2.
 		self._size = size
-		self._bb_center = self._center.copy()
 		self.set_location(shift)
 
 	def get_frame_infos(self, time):
-		return self._surface, self._center
+		return self._img_proxy, self._bb_center
 
 	def update(self, dt):
 		pass
