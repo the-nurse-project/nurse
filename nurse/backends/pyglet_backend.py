@@ -116,7 +116,10 @@ class PygletGraphicEngine(GraphicEngine):
 	
 	def __init__(self, resolution, caption):
 		GraphicEngine.__init__(self)
+		# for examples TODO: find a better way
 		pyglet.resource.path.append('../data/pix')
+		# for games: standard path
+		pyglet.resource.path.append('data/pix')
 		pyglet.resource.reindex()
 		self._win = pyglet.window.Window(resolution[0], resolution[1],
 							caption=caption)

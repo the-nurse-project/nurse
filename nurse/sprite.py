@@ -47,17 +47,26 @@ class Sprite(StateMachine):
 			for fname in frames_fnames]
 		self._refresh_delay[state] = int(1000 / fps)
 		loc = []
+		self._size = np.array([0., 0.])
 		if isinstance(center_location, str):
-			if center_location == 'centered':
-				for img in self._frames[state]:
-					loc.append(np.array(img.get_size()) /2.)
-			elif center_location == 'centered_bottom':
-				for img in self._frames[state]:
-					width, height = img.get_size()
+			for img in self._frames[state]:
+				width, height = img.get_size()
+				if width > self._size[0]:
+					self._size[0] = width
+				if height > self._size[1]:
+					self._size[1] = height
+				if center_location == 'centered':
+					loc.append(np.array([width, height])/2.)
+				elif center_location == 'centered_bottom':
 					loc.append(np.array([width/2., height]))
 		elif isinstance(center_location, list):
 			loc = center_location
 		else:	loc = [center_location] * len(self._frames[state])
+		if center_location == 'centered':
+			self._bb_center = self._size / 2.
+		elif center_location == 'centered_bottom':
+			self._bb_center = self._size
+			self._bb_center[0] /= 2.
 		self._frames_center_location[state] = loc
 
 	def get_frame_infos(self, time):
@@ -95,6 +104,11 @@ class Sprite(StateMachine):
     set sprite location in world coordinate system
 		'''
 		self._location = location
+
+	def bounding_box(self):
+		return (self._location[0] - self._bb_center[0], 
+			self._location[1] - self._bb_center[1], 
+			self._size[0], self._size[1])
 
 
 class MovingSprite(Sprite):
@@ -267,16 +281,27 @@ class StaticSprite(Sprite):
 
 class UniformLayer(Sprite):
 	def __init__(self, name, context, layer=2, size=None,
-			shift=(0, 0), color=(0, 0, 0), alpha=128):
+			shift=(0, 0), center_location=(0,0),
+			color=(0, 0, 0), alpha=128):
 		Sprite.__init__(self, name, context, layer)
 		gfx = Config.get_graphic_engine()
-		self._surface = gfx.get_uniform_surface(shift, size,
+		self._img_proxy= gfx.get_uniform_surface(shift, size,
 							color, alpha)
-		self._center = np.array(self._surface.get_size()) /2.
-		Sprite.set_location(self, np.array(shift) + self._center)
-	
+		if isinstance(center_location, str):
+			width, height = np.array(self._img_proxy.get_size())
+			if center_location == 'centered':
+				self._bb_center = np.array([width, height]) / 2.
+			elif center_location == 'centered_bottom':
+				self._bb_center = np.array([width / 2., height])
+			elif center_location == 'top_left':
+				self._bb_center = np.array([0., 0.])
+		else:
+			self._bb_center = np.asarray(center_location)
+		self._size = size
+		self.set_location(shift)
+
 	def get_frame_infos(self, time):
-		return self._surface, self._center
+		return self._img_proxy, self._bb_center
 
 	def update(self, dt):
 		pass

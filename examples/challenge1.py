@@ -145,7 +145,7 @@ def main():
 	context_manager.set_initial_state(context_ingame)
 	context_manager.start()
 
-	event = SignalEvent(None, context_ingame.on_transition,
+	event = SignalEvent(None, context_ingame, 'on_transition',
 					signal_dialog_on)
 	event.start()
 
