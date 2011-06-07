@@ -41,7 +41,7 @@ class SdlKeyBoardDevice(KeyBoardDevice):
 		keysym_map[pygame.constants.__getattribute__(key)] = \
 			KeyBoardDevice.constants.__getattribute__(key)
 	for key in ['K_UP', 'K_DOWN', 'K_LEFT', 'K_RIGHT', 'K_ESCAPE',
-		'K_SPACE', 'KEYDOWN', 'KEYUP']:
+		'K_SPACE', 'KEYDOWN', 'KEYUP', 'K_RETURN']:
 		keysym_map[pygame.constants.__getattribute__(key)] = \
 			KeyBoardDevice.constants.__getattribute__(key)
 	

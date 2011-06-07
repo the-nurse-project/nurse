@@ -41,7 +41,7 @@ class PygletKeyBoardDevice(KeyBoardDevice):
 		key = str(i)
 		keysym_map[pyglet.window.key.__getattribute__('NUM_' + key)] = \
 			KeyBoardDevice.constants.__getattribute__('K_' + key)
-	for key in ['UP', 'DOWN', 'LEFT', 'RIGHT', 'ESCAPE', 'SPACE']:
+	for key in ['UP', 'DOWN', 'LEFT', 'RIGHT', 'ESCAPE', 'SPACE', 'RETURN']:
 		keysym_map[pyglet.window.key.__getattribute__(key)] = \
 			KeyBoardDevice.constants.__getattribute__('K_' + key)
 
@@ -85,6 +85,60 @@ class PygletImageProxy(ImageProxy):
 
 	def get_height(self):
 		return self._raw_image.height
+
+	def find_color_area(self, color='white'):
+		'''
+    Tested for tiny pictures (2 - 100 pixels) then ``pixels `` is of type ``str``.
+    With bigger pictures (e.g. 500*150), pixels appeared as an array of c_ubytes,
+    hence the conversion into a string.
+
+    Tested for color white on png files with RGBA format.
+
+		'''
+		import numpy as np
+		import string
+		raw_data = self._raw_image.image.get_image_data()
+		imwidth, imheight = raw_data.width, raw_data.height
+		print raw_data.format, imwidth * len(raw_data.format)
+		pixels = raw_data.get_data(raw_data.format, imwidth * len(raw_data.format))
+		if type(pixels[0]) == int:
+			n = np.array(pixels, dtype=np.uint8)
+			m = n.tostring()
+		else:
+			m = pixels
+		print type(pixels), type(pixels[0]), len(pixels)
+		#m = np.array(pixels).tostring()
+		if color == 'white':
+			c = [255, 255, 255, 255]
+		elif color == 'black':
+			c = [0, 0, 0, 255]
+		elif color == 'red':
+			c = [255, 0, 0, 255]
+		start = 0
+		end = len(m)
+		c_str = np.array(c, dtype=np.uint8).tostring()
+		print c_str
+		first_pixel = string.find(m, c_str, start, end)
+		while ( first_pixel % len(c) != 0 ):
+			start = first_pixel + 1
+			first_pixel = string.find(m, c_str, start, end)
+		print 'first_pixel', first_pixel
+		start = 0
+		last_pixel = string.rfind(m, c_str, start, end)
+		while ( last_pixel % len(c) != 0 ):
+			end = last_pixel + len(c) - 1
+			last_pixel = string.rfind(m, c_str, start, end)
+
+		print 'last_pixel', last_pixel
+		bottom_left = ( (first_pixel / len(c) ) % imwidth,
+		    imheight - 1 - (first_pixel / len(c) ) // imwidth )
+		top_right = ( (last_pixel / len(c) ) % imwidth,
+		    bottom_left[1] - ((last_pixel - first_pixel) / len(c)) // imwidth )
+		#imheight - 1 - (last_pixel / len(c) ) // imwidth )
+		top_left = ( bottom_left[0], top_right[1] )
+		bottom_right = ( top_right[0], bottom_left[1] )
+		return (top_left, bottom_right), first_pixel, last_pixel
+
 
 
 class PygletUniformSurface(object):

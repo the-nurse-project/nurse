@@ -20,7 +20,7 @@ class KeyBoardDevice(Object):
 	constants = Enum(*(['KEYDOWN', 'KEYUP'] + \
 		['K_' + chr(i) for i in range(ord('a'), ord('z') + 1)] + \
 		['K_' + str(i) for i in range(10)] + \
-		['K_UP', 'K_DOWN', 'K_LEFT', 'K_RIGHT', 'K_ESCAPE', 'K_SPACE']+\
+		['K_UP', 'K_DOWN', 'K_LEFT', 'K_RIGHT', 'K_ESCAPE', 'K_SPACE', 'K_RETURN']+\
 		['UNKNOWN']))
 
 	def __init__(self):
