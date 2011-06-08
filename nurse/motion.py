@@ -6,44 +6,122 @@ from config import Config
 from backends import KeyBoardDevice
 
 
+''' This module groups standard motions used to change sprites location.
+.. module:: motion
+.. moduleauthor:: Matthieu Perrot <matthieu.perrot@gmail.com>
+'''
+
 class Motion(StateMachine):
+	'''
+    Abstract Motion class.
+
+    A motion is a class used to drive/modify sprites locations.
+	'''
 	def __init__(self, name='motion', context=None, speed=100.):
 		'''
-    speed: speed in world-coordinate metric per seconds
+    Parameters:
+
+    name : str
+        Name of the underlying Object.
+    context : Context instance
+        Attach the underlying StateMachine to this context.
+    speed : float
+        Speed in world-coordinate metric per seconds.
 		'''
 		StateMachine.__init__(self, name, context)
 		self._speed = speed
 
-	def update(self, dt):
-		pass
-
 	def update_sprite(self, sprite, dt):
+		'''
+    Apply this motion to the given sprite.
+
+    Parameters:
+    
+    sprite : Sprite instance
+        sprite whose location needs to be updated
+    dt : float
+        delta of time (in ms) since the last call.
+
+
+    Notes:
+
+    - Call by the Sprite update method.
+    - Virtual method to be defined in children classes.
+		'''
 		raise NotImplementedError
 
 	def init(self, sprite):
+		'''
+    Initialize location of a sprite according to this motion.
+
+    Parameters:
+    
+    sprite : Sprite instance
+        sprite whose location needs to be initialized
+		'''
 		pass
 
 	def cont(self, sprite):
+		'''
+    Initialize location of a sprite for 'motion continuation'
+    according to this motion.
+
+    Parameters:
+    
+    sprite : Sprite instance
+        sprite whose location needs to be initialized to continue a motion.
+		'''
 		pass
 
 
-class StaticMotion(Motion):
-	def __init__(self, name='static_motion', context=None):
+class NoMotion(Motion):
+	'''
+    Spurious motion used by default in any sprite before Sprite.set_motion
+    has been called.
+	'''
+	def __init__(self, name='no_motion', context=None):
+		'''
+    Parameters:
+
+    name : str
+        Name of the underlying Object.
+    context : Context instance
+        Attach the underlying StateMachine to this context.
+		'''
 		Motion.__init__(self, name, context)
 
 	def update_sprite(self, sprite, dt):
+		'''
+    Do nothing. The sprite location is unchanged.
+
+    Parameters: ignored
+		'''
 		pass
 
-static_motion = StaticMotion()
+no_motion = NoMotion()
 
 
 class PathMotion(Motion):
+	'''
+    This motion is used to make a sprite follow linearly with a specified speed
+    a given path defined by a list of points. 
+	'''
 	Start_to_End = 0
 	End_to_Start = 1
 	def __init__(self, name='path_motion', context=None, speed=100.,
 					start_from_location=False):
 		'''
-    path : list of world coordinates
+    Parameters:
+
+    name : str
+        Name of the underlying Object.
+    context : Context instance
+        Attach the underlying StateMachine to this context.
+    speed : float
+        Speed in world-coordinate metric per seconds.
+    start_from_location: bool
+        If true initial sprite location will be used to init the motion.
+	If false, the first path checkpoint is used instead (self._path[0]).
 		'''
 		Motion.__init__(self, name, context, speed)
 		self._path = None
@@ -64,6 +142,12 @@ class PathMotion(Motion):
 		self._start_from_location = start_from_location
 
 	def set_path(self, path):
+		'''
+    Parameters:
+
+    path : list of 2-elements tuples or arrays
+        list of coordinates expressed in world-coordinate metric.
+		'''
 		self._path = path
 
 	def init(self, sprite, checkpoint=0):
@@ -146,6 +230,9 @@ class PathMotion(Motion):
 
 
 class KeyboardMotion(Motion):
+	'''
+    Abstract class used by keyboard-based motions.
+    	'''
 	def __init__(self, name='sprite', context=None, speed=100.):
 		Motion.__init__(self, name, context, speed)
 		if context is not None:
@@ -166,6 +253,9 @@ class KeyboardMotion(Motion):
 
 
 class KeyboardLeftRightArrowsMotion(KeyboardMotion):
+	'''
+    Left and Right arrows are used to move a sprite to the eponym direction.
+    	'''
 	def __init__(self, name='sprite', context=None, speed=100.):
 		KeyboardMotion.__init__(self, name, context, speed)
 
@@ -199,6 +289,10 @@ class KeyboardLeftRightArrowsMotion(KeyboardMotion):
 
 
 class KeyboardFullArrowsMotion(KeyboardMotion):
+	'''
+    All four arrows and their combinations (Left + Up for instance) are used
+    to move a sprite to the eponym direction or diagonally between 2 directions.
+    	'''
 	def __init__(self, name='sprite', context=None, speed=100.):
 		KeyboardMotion.__init__(self, name, context, speed)
 

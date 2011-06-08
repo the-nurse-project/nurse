@@ -50,6 +50,18 @@ class StateMachine(State):
 		if context is not None: context.add_fsm(self)
 		self._context = context
 
+	def update(self, dt):
+		'''
+    The event loop periodically call this method on state machines registered
+    to an active context.
+
+    Parameters:
+  
+    dt : float
+        delta of time (in ms) since the last call.
+		'''
+		pass
+
 	def get_context(self):
 		return self._context
 

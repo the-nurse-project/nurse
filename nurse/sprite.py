@@ -7,6 +7,12 @@ from backends import KeyBoardDevice
 from motion import *
 
 
+''' This module groups standard sprites.
+.. module:: sprites
+.. moduleauthor:: Matthieu Perrot <matthieu.perrot@gmail.com>
+'''
+
+
 class Sprite(StateMachine):
 	def __init__(self, name='sprite', context=None, layer=1):
 		'''
@@ -20,9 +26,20 @@ class Sprite(StateMachine):
 		self._location = np.zeros(2)
 		self._size = np.zeros(2)
 		self._bb_center = np.zeros(2)
-		self.set_motion(static_motion)
+		self.set_motion(no_motion)
 
 	def set_motion(self, motion, cont=False):
+		'''
+    Replace the current motion by the given one.
+
+    Parameters:
+  
+    motion : Motion instance
+        The motion to be attached to this sprite.
+    cont : bool
+        If false the motion is reinitialized.
+	If true the motion is continued.
+		'''
 		if motion.get_context() is None:
 			motion.set_context(self.get_context())
 		self._motion = motion
@@ -32,6 +49,9 @@ class Sprite(StateMachine):
 		else:	motion.init(self)
 
 	def get_motion(self):
+		'''
+    Return the current motion.
+		'''
 		return self._motion
 
 	def update(self, dt):
