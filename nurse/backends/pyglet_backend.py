@@ -107,7 +107,6 @@ class PygletImageProxy(ImageProxy):
 		else:
 			m = pixels
 		print type(pixels), type(pixels[0]), len(pixels)
-		#m = np.array(pixels).tostring()
 		if color == 'white':
 			c = [255, 255, 255, 255]
 		elif color == 'black':
@@ -117,28 +116,23 @@ class PygletImageProxy(ImageProxy):
 		start = 0
 		end = len(m)
 		c_str = np.array(c, dtype=np.uint8).tostring()
-		print c_str
 		first_pixel = string.find(m, c_str, start, end)
 		while ( first_pixel % len(c) != 0 ):
 			start = first_pixel + 1
 			first_pixel = string.find(m, c_str, start, end)
-		print 'first_pixel', first_pixel
 		start = 0
 		last_pixel = string.rfind(m, c_str, start, end)
 		while ( last_pixel % len(c) != 0 ):
 			end = last_pixel + len(c) - 1
 			last_pixel = string.rfind(m, c_str, start, end)
 
-		print 'last_pixel', last_pixel
 		bottom_left = ( (first_pixel / len(c) ) % imwidth,
 		    imheight - 1 - (first_pixel / len(c) ) // imwidth )
 		top_right = ( (last_pixel / len(c) ) % imwidth,
 		    bottom_left[1] - ((last_pixel - first_pixel) / len(c)) // imwidth )
-		#imheight - 1 - (last_pixel / len(c) ) // imwidth )
 		top_left = ( bottom_left[0], top_right[1] )
 		bottom_right = ( top_right[0], bottom_left[1] )
 		return (top_left, bottom_right), first_pixel, last_pixel
-
 
 
 class PygletUniformSurface(object):
