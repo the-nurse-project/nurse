@@ -6,6 +6,7 @@ from nurse.config import Config
 from nurse.sprite import *
 from nurse.context import Context, ContextManager
 from nurse.screen import *
+from nurse.game.dialog import *
 
 # FIXME: - dialog does not work yet (re-test with last devel from greg
 #          dialog branch)
@@ -34,7 +35,7 @@ def create_sprites(context):
 	states = []
 	for i, (perso, txt, writing_machine_mode) in enumerate(msg):
 		state = DialogState('state_%d' % i, txt, 'Times New Roman', 40,
-				400, 5, perso, 20., writing_machine_mode)
+			((0, 0), (400, 200)), perso, 20., writing_machine_mode)
 		dialog.add_state(state)
 		states.append(state)
 	signal = (KeyBoardDevice.constants.KEYDOWN,

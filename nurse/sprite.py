@@ -177,7 +177,7 @@ class StaticSprite(Sprite):
 		else:
 			self._bb_center = np.asarray(center_location)
 
-	def get_frame_infos(self, time):
+	def get_frame_infos(self, time=0):
 		return self._img_proxy, self._bb_center
 
 
@@ -205,68 +205,6 @@ class UniformLayer(Sprite):
 	def get_frame_infos(self, time):
 		return self._img_proxy, self._bb_center
 
-
-
-class DialogState(State):
-	def __init__(self, name='text', text='...', font='Times New Roman',
-		font_size=20, max_width=100, max_lines=3, perso=None,
-		char_per_sec=5., writing_machine_mode=True):
-		State.__init__(self, name)
-		self._text = text
-		self.font = font
-		self.font_size = font_size
-		self.max_width = max_width
-		self.max_lines = max_lines
-		self.perso = perso
-		if writing_machine_mode:
-			self.char_delay = 1000. / char_per_sec
-		else:	self.char_delay = 0
-		self.writing_machine_mode = writing_machine_mode
-		self.list_backend_repr = []
-		self._current_time = 0
-		self._current_indice = 0
-		self._current_text = ''
-		self._current_height = 0
-	
-	def _update_chars(self, n):
-		max_ind = len(self._text)
-		ind = self._current_indice
-		if ind == max_ind: return
-		new_ind = ind + n
-		if new_ind > max_ind: new_ind = max_ind
-		new_text = self._text[ind:new_ind]
-		self._current_text += new_text
-		self._current_indice = new_ind
-		anchor_x, anchor_y = self._fsm.get_location()
-		repr = Config.get_graphic_engine().load_text(\
-				self._current_text, self.font, self.font_size,
-				anchor_x, anchor_y + self._current_height)
-		if repr.content_width <= self.max_width:
-			if len(self.list_backend_repr) == 0:
-				self.list_backend_repr.append(repr)
-			else:	self.list_backend_repr[-1] = repr
-		else:
-			self._current_height += repr.content_height
-			repr = Config.get_graphic_engine().load_text(\
-				new_text, self.font, self.font_size,
-				anchor_x, anchor_y + self._current_height)
-			self.list_backend_repr.append(repr)
-			self._current_text = new_text
-			if len(self.list_backend_repr) > self.max_lines:
-				del self.list_backend_repr[0]
-				Config.get_graphic_engine().shift_text(self,
-							repr.content_height)
-				self._current_height -= repr.content_height
-				
-	def update(self, dt):
-		self._current_time += dt	
-		if self._current_time >= self.char_delay:
-			if self.char_delay == 0:
-				n = len(self._text)
-			else:	n = int(self._current_time / self.char_delay)
-			self._update_chars(n)
-			self._current_time -= n * self.char_delay
-		
 
 
 class Dialog(Sprite):

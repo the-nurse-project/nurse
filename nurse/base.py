@@ -86,9 +86,6 @@ class Object(object):
                         connections = self._async_connections
                 else:   connections = self._sync_connections
                 connections[signal].remove(connection)
-                print 'disconnected'
- 
-                #del connections[connections.index(connection)]
 
 	def emit(self, signal, signal_data=None):
 		'''
