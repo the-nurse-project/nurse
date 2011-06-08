@@ -13,6 +13,7 @@ from motion import *
 '''
 
 
+#-------------------------------------------------------------------------------
 class Sprite(StateMachine):
 	def __init__(self, name='sprite', context=None, layer=1):
 		'''
@@ -240,3 +241,59 @@ class FpsSprite(Sprite):
 		if context is None: context = Config.get_default_context()
 		self.fg_color = fg_color
 		self.bg_color = bg_color
+
+	def update(self, dt):
+		pass
+
+
+#-------------------------------------------------------------------------------
+# XXX: la classe suivante se base sur des sprites, mais en realite seule la
+# position et la bounding box de l'objet est necessaire. Peut-etre nous
+# faudrait-il une classe qui comporte ses caracteristiques ?
+# - est-ce qu'une classe sans image, sans frames, mais avec une position et
+#   une bounding box a du sens ? Eventuellement pour definir des boundings box
+#   associees a des zones invisibles / decorrelees de sprites.
+class CollisionManager(Object):
+	def __init__(self, name='collider_manager'):
+		Object.__init__(self, name)
+		self._collidable_sprites = []
+		self._collidable_ref_sprite = None
+
+	def add_collidable_ref_sprite(self, sprite):
+		self._collidable_ref_sprite = sprite 
+
+	def add_collidable_sprite(self, sprite):
+		self._collidable_sprites.append(sprite)
+
+	def add_collidable_sprites(self, sprites):
+		self._collidable_sprites += sprites
+
+	def _collide(self, bb1, bb2):
+		x1, y1, w1, h1 = bb1
+		x2, y2, w2, h2 = bb2
+		x1_w = x1 + w1
+		y1_h = y1 + h1
+		x2_w = x2 + w2
+		y2_h = y2 + h2
+		points = [(x1, y1), (x1_w, y1), (x1_w, y1_h), (x1, y1_h)]
+		in_bb = False
+		for p in points:
+			if (p[0] >= x2) and (p[0] <= x2_w) and\
+				(p[1] >= y2) and (p[1] <= y2_h):
+				in_bb = True
+				break
+		return in_bb
+
+# XXX: seul le premier sprite qui collide le sprite de ref voit son slot appele
+# On pourrait ajouter un mode ou tous les sprites entrant en collision voient
+# leur slot respectif appele.
+
+# XXX: bien sur on pourrait avoir une strategie plus intelligente pour trouver
+# le ou les sprites en collision : representation hierarchique par exemple.
+	def call_slot(self, slot, event):
+		sprite_bb = self._collidable_ref_sprite.bounding_box()
+		for sprite in self._collidable_sprites:
+			bb = sprite.bounding_box()
+			if self._collide(sprite_bb, bb):
+				sprite.call_slot(slot, event)
+				break
