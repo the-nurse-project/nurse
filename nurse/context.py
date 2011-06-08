@@ -15,6 +15,9 @@ class Context(State):
 	def add_fsm(self, fsm):
 		self._fsm_list.append(fsm)
 
+	def remove_fsm(self, fsm):
+		self._fsm_list.remove(fsm)
+
 	def add_visible_data(self, data, layer=0):
 		self._visible_data.setdefault(layer, []).append(data)
 

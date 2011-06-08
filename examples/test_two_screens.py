@@ -9,16 +9,20 @@ from nurse.screen import *
 
 
 def create_bg(context):
-	fsm = StaticSprite('hospital', context, layer=0,
-				imgname='hopital.png')
-	fsm.set_location(np.array([0, 0]))
+	fsm = StaticSprite('hospital', context, layer=0)
+	fsm.load_from_filename('hopital.png')
+	fsm.set_location(np.array([-440, -300]))
 	fsm.start()
 
 
 def create_pause(context):
-	fsm = StaticSprite('pause', context, layer=2, imgname='pause.png')
+	screen = Config.get_graphic_engine().get_screen()
+	w, h = screen.get_width(), screen.get_height()
+	fsm = StaticSprite('pause', context, layer=2)
+	fsm.load_from_filename('pause.png')
 	# FIXME : coordinates should be in screen coordinates
-	fsm.set_location(np.array([400, 200]))
+	size = fsm._size
+	fsm.set_location(np.array([(w - size[0]) / 2, (h - size[1]) / 2]))
 	fsm.start()
 
 
@@ -29,10 +33,12 @@ def create_perso_left(context):
 	p4 = [-200, 100]
 	p5 = [-200, -100]
 	path = np.array([p1, p2, p3, p4, p5])
-	fsm = MovingSprite("nurse", context, layer=2, speed=180.)
+	motion = PathMotion(speed=180.)
+	motion.set_path(path)
+	fsm = AnimatedSprite("nurse", context, layer=2)
+	fsm.set_motion(motion)
 	fsm.load_frames_from_filenames('__default__', ['infirmiere.png'],
-							'centered', 1)
-	fsm.set_path(path)
+							'centered_bottom', 1)
 	fsm.start()
 	return fsm
 
@@ -44,10 +50,12 @@ def create_perso_right(context):
 	p4 = [200, 100]
 	p5 = [200, -100]
 	path = np.array([p1, p2, p3, p4, p5])
-	fsm = MovingSprite("nurse", context, layer=2, speed=180.)
+	motion = PathMotion(speed=180.)
+	motion.set_path(path)
+	fsm = AnimatedSprite("perso", context, layer=2)
+	fsm.set_motion(motion)
 	fsm.load_frames_from_filenames('__default__', ['perso.png'],
-							'centered', 1)
-	fsm.set_path(path)
+							'centered_bottom', 1)
 	fsm.start()
 	return fsm
 

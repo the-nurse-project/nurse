@@ -58,7 +58,6 @@ class DialogState(State):
 				if not self._has_terminated :
 					self._has_terminated = True
 					self.emit('dialog_state_terminated')
-					print 'dialog_state_terminated', self._lines[self._current_line]
 				return
 			ind = 0
 			self._current_text = ''
@@ -115,7 +114,7 @@ class DialogListener(Object):
 		self.current_state += 1
 		try:
 			self.context.set_visible (self.next, True)
-		except NameError as e:
+		except NameError:
 			pass
 
 	def on_fast_forward(self, event):
@@ -134,8 +133,10 @@ class DialogContext(Context):
 					color=(0, 0, 0), alpha=128)
 		uniform.start()
 	
-		dialog_bg = StaticSprite('dialog_bg', self, layer=4, imgname='dialog.png', center_location='top_left')
-		width, height = dialog_bg._frames['__default__'][0].get_size()
+		dialog_bg = StaticSprite('dialog_bg', self, layer=4)
+		dialog_bg.load_from_filename(imgname='dialog.png',
+					center_location='top_left')
+		_, _, width, height = dialog_bg.bounding_box()
 		x, y = (ws - width) / 2., hs - height 
 		area = (x, y), (width, height)
 
@@ -143,7 +144,7 @@ class DialogContext(Context):
 		dialog_bg.start()
 
 		if text_area_mode is "color_area":
-			black_area = dialog_bg._frames['__default__'][0].find_color_area(color='black')
+			black_area = dialog_bg.get_frame_infos()[0].find_color_area(color='black')
 			text_area = ((x+black_area[0][0], y+black_area[0][1]), (black_area[1][0]-black_area[0][0], black_area[1][1]-black_area[0][1]))
 		elif text_area_mode is "auto":
 			text_area = (area[0][0] + 100, area[0][1] + 30), (area[1][0] - 130, area[1][1] + 60) 
@@ -164,7 +165,8 @@ class DialogContext(Context):
 		next.set_location([x+width-80,y+height-80])
 		next.start()	
 		self.set_visible(next, False)
-		sprite = StaticSprite('sprite', self, layer=4, imgname='perso.png')
+		sprite = StaticSprite('sprite', self, layer=4)
+		sprite.load_from_filename(imgname='perso.png')
 		sprite.set_location([x + 60, y + height / 2])
 		sprite.start() # FIXME
 		dialog.dl = DialogListener()
