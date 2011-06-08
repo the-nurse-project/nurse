@@ -4,6 +4,7 @@ from nurse.state_machine import State
 from nurse.config import Config
 from nurse.sprite import Dialog, UniformLayer, Text, StaticSprite
 from nurse.context import Context
+import numpy as np
 
 class DialogState(State):
 	
@@ -123,7 +124,7 @@ class DialogListener(Object):
 		
 
 class DialogContext(Context):
-	 def __init__(self, name, msg, is_visible=True, is_active=True,
+	 def __init__(self, name, msg, text_area_mode="auto", is_visible=True, is_active=True,
 			 _is_receiving_events=True):
 		Context.__init__(self, name, is_visible, is_active, _is_receiving_events)
 
@@ -133,19 +134,20 @@ class DialogContext(Context):
 					color=(0, 0, 0), alpha=128)
 		uniform.start()
 	
-		w, h = int(ws * 0.8), int(hs * 0.3)
-		x, y = (ws - w) / 2., hs - h - 50
-		area = (x,y), (w,h)
-
-		text_area = (area[0][0] + 100, area[0][1] + 30), (area[1][0] - 130, area[1][1] + 60) 
-		print text_area
 		dialog_bg = StaticSprite('dialog_bg', self, layer=4, imgname='dialog.png', center_location='top_left')
+		width, height = dialog_bg._frames['__default__'][0].get_size()
+		x, y = (ws - width) / 2., hs - height 
+		area = (x, y), (width, height)
+
 		dialog_bg.set_location([x,y])
 		dialog_bg.start()
-		black_area = dialog_bg._frames['__default__'][0].find_color_area(color='black')
-		print black_area
-		text_area = ((x+black_area[0][0], y+black_area[0][1]), (black_area[1][0]-black_area[0][0], black_area[1][1]-black_area[0][1]))
-		print text_area
+
+		if text_area_mode is "color_area":
+			black_area = dialog_bg._frames['__default__'][0].find_color_area(color='black')
+			text_area = ((x+black_area[0][0], y+black_area[0][1]), (black_area[1][0]-black_area[0][0], black_area[1][1]-black_area[0][1]))
+		elif text_area_mode is "auto":
+			text_area = (area[0][0] + 100, area[0][1] + 30), (area[1][0] - 130, area[1][1] + 60) 
+
 		dialog = Dialog('dialog', self, layer=4)
 		
 		states = []
@@ -159,11 +161,11 @@ class DialogContext(Context):
 		dialog.set_location(text_area[0])
 		dialog.start()
 		next = Text('text', self, 4, '...', 'Times New Roman', 40)
-		next.set_location([x+w-80,y+h-80])
+		next.set_location([x+width-80,y+height-80])
 		next.start()	
 		self.set_visible(next, False)
 		sprite = StaticSprite('sprite', self, layer=4, imgname='perso.png')
-		sprite.set_location([x + (180 - x) / 2, y + h / 2])
+		sprite.set_location([x + 60, y + height / 2])
 		sprite.start() # FIXME
 		dialog.dl = DialogListener()
 		dialog.dl.states = states
