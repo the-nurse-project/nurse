@@ -44,11 +44,32 @@ class StateMachine(State):
 	STOP = 1
 	def __init__(self, name='state machine', context=None):
 		State.__init__(self, name)
-		if context is None: context = Config.get_default_context()
 		self._initial_state = None
 		self._possible_states = {}
 		self._current_state = None
-		context.add_fsm(self)
+		if context is not None: context.add_fsm(self)
+		self._context = context
+
+	def update(self, dt):
+		'''
+    The event loop periodically call this method on state machines registered
+    to an active context.
+
+    Parameters:
+  
+    dt : float
+        delta of time (in ms) since the last call.
+		'''
+		pass
+
+	def get_context(self):
+		return self._context
+
+	def set_context(self, context):
+		old_context = self._context
+		if old_context is not None: old_context.remove_fsm(self)
+		self._context = context
+		self._context.add_fsm(self)
 
 	def set_initial_state(self, state):
 		if state not in self._possible_states.values():

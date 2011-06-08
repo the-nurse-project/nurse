@@ -6,18 +6,18 @@ from nurse.config import Config
 from nurse.sprite import *
 from nurse.context import Context, ContextManager
 from nurse.screen import *
-
+from nurse.game.dialog import *
 
 def create_bg(context):
-	fsm = StaticSprite('hospital', context, layer=0,
-				imgname='hopital.png')
-	fsm.set_location(np.array([-100, -100]))
+	fsm = StaticSprite('hospital', context, layer=0)
+	fsm.load_from_filename('hopital.png')
+	fsm.set_location(np.array([-440, -300]))
 	fsm.start()
 
 
 def create_pause(context):
-	fsm = StaticSprite('pause', context, layer=2,
-				imgname='pause.png')
+	fsm = StaticSprite('pause', context, layer=2)
+	fsm.load_from_filename('pause.png')
 	fsm.set_location(np.array([0, 0]))
 	fsm.start()
 	uniform = UniformLayer('dark', context, layer=0,
@@ -26,7 +26,8 @@ def create_pause(context):
 
 
 def create_player(context):
-	fsm = Player("player", context, layer=2, speed=120.)
+	fsm = AnimatedSprite("player", context, layer=2)
+	fsm.set_motion(KeyboardFullArrowsMotion(speed=120.))
 	fsm.load_frames_from_filenames('__default__', ['perso.png'],
 						'centered_bottom', 1)
 	fsm.set_location(np.array([-260, -140]))
@@ -41,69 +42,14 @@ def create_nurse(context):
 	p4 = [-400, 50]
 	p5 = [200, 50]
 	path = np.array([p1, p2, p3, p4, p5, p3, p2])
-	fsm = MovingSprite("nurse", context, layer=2, speed=180.)
+	motion = PathMotion(speed=180.)
+	motion.set_path(path)
+	fsm = AnimatedSprite("nurse", context, layer=2)
+	fsm.set_motion(motion)
 	fsm.load_frames_from_filenames('__default__', ['infirmiere.png'],
 							'centered_bottom', 1)
-	fsm.set_path(path)
 	fsm.start()
 	return fsm
-
-
-def create_dialog(context):
-	screen = Config.get_graphic_engine().get_screen()
-	ws, hs = screen.get_width(), screen.get_height()
-	uniform = UniformLayer('dark', context, layer=0,
-				color=(0, 0, 0), alpha=128)
-	uniform.start()
-
-	w, h = int(ws * 0.8), int(hs * 0.3)
-	x, y = (ws - w) / 2., hs - h - 50
-	uniform = UniformLayer('dial1', context, layer=1,
-				size=(w, h), shift=(x, y),
-				color=(255, 255, 255), alpha=255)
-	uniform.start()
-	uniform = UniformLayer('dial2', context, layer=2,
-				size=(w - 2, h - 2), shift=(x + 1, y + 1),
-				color=(0, 0, 64), alpha=255)
-	uniform.start()
-	uniform = UniformLayer('dial3', context, layer=3,
-			size=(w - 4, h - 4), shift=(x + 2, y + 2),
-			color=(0, 0, 128), alpha=255)
-	uniform.start()
-	dialog = Dialog('dialog', context, layer=4)
-	msg = [
-		('player', '... ...mmm...ou...ou suis-je ?' + \
-		"ahh...mes yeux !" + \
-		"Laissons leur le temps de s'habituer.", True), 
-		#('player', '...%1...%1mmm...%1ou...ou suis-je ?\n' + \
-		#"ahh...mes yeux !\n" + \
-		#"Laissons leur le temps de s'habituer\n", True), 
-		('player', "Mais%1c'est un hopital !\n" + \
-		"Voyons. Jambes...%1OK. Bras...%1OK. Tete...%1OK.", True),
-		('nurse', "Ho! J'ai entendu du bruit dans la chambre " + \
-		"d'a cote", False),
-		('player', 'Bon...allons chercher des renseignements.', True)
-	]
-	states = []
-	for i, (perso, txt, writing_machine_mode) in enumerate(msg):
-		state = DialogState('state_%d' % i, txt, 'Times New Roman', 20,
-				400, 5, perso, 20., writing_machine_mode)
-		dialog.add_state(state)
-		states.append(state)
-
-	signal = (KeyBoardDevice.constants.KEYDOWN,
-			KeyBoardDevice.constants.K_SPACE)
-	for i in range(len(states) - 1):
-		states[i].add_transition(context, signal, states[i + 1])
-	dialog.set_initial_state(states[0])
-	dialog.set_location(np.array([180, 400]))
-	dialog.start()
-	next = Text('text', context, 4, '...', 'Times New Roman', 40)
-	next.set_location(np.array([650, 480]))
-	next.start()
-	sprite = StaticSprite('sprite', context, layer=4, imgname='perso.png')
-	sprite.set_location(np.array([x + (180 - x) / 2, y + h / 2]))
-	sprite.start() # FIXME
 
 
 #-------------------------------------------------------------------------------
@@ -123,7 +69,26 @@ def main():
 	properties_game_inpause = { 'is_visible' : True, 'is_active' : False,
 				'_is_receiving_events' : False}
 	context_ingame = Context("In game")
-	context_dialog = Context("Dialog", **properties_all_inactive)
+
+	resolution = Config.resolution
+	geometry = (0, 0, resolution[0], resolution[1])
+	screen_fixed = VirtualScreenRealCoordinates('fixed screen', geometry)
+	msg = [ ('player', '... ...mmm...ou...ou suis-je ? ' + \
+		"ahh...mes yeux ! " + \
+		"Laissons leur le temps de s'habituer.", True), 
+		#('player', '...%1...%1mmm...%1ou...ou suis-je ?\n' + \
+		#"ahh...mes yeux !\n" + \
+		#"Laissons leur le temps de s'habituer\n", True), 
+		('player', "Mais%1c'est un hopital ! " + \
+		"Voyons. Jambes...%1OK. Bras...%1OK. Tete...%1OK.", True),
+		('nurse', "Ho! J'ai entendu du bruit dans la chambre " + \
+		"d'a cote", False),
+		('player', 'Bon...allons chercher des renseignements.', True)
+	]
+
+	context_dialog = DialogContext("Dialog", msg)
+	context_dialog.add_screen(screen_fixed)
+
 	context_pause = Context("Pause", **properties_all_inactive)
 	context_fps = Context("fps", **properties_all_inactive)
 	signal_pause = (KeyBoardDevice.constants.KEYDOWN,
@@ -149,8 +114,6 @@ def main():
 					signal_dialog_on)
 	event.start()
 
-	resolution = Config.resolution
-	geometry = (0, 0, resolution[0], resolution[1])
 
 	# ingame context
 	create_bg(context_ingame)
@@ -162,11 +125,8 @@ def main():
 
 	# pause context
 	create_pause(context_pause)
-	screen_fixed = VirtualScreenRealCoordinates('fixed screen', geometry)
 	context_pause.add_screen(screen_fixed)
 
-	# dialog context
-	create_dialog(context_dialog)
 	context_dialog.add_screen(screen_fixed)
 
 	# fps context
